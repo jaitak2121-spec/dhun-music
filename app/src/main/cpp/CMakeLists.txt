@@ -11,7 +11,7 @@
 # to that same tree without duplicating this module.
 
 cmake_minimum_required(VERSION 3.22.1)
-project(dollbloom_analysis LANGUAGES CXX)
+project(dhun_analysis LANGUAGES CXX)
 
 get_filename_component(DOLLBLOOM_NATIVE_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../native"
@@ -20,7 +20,7 @@ get_filename_component(DOLLBLOOM_NATIVE_DIR
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(dollbloom_analysis SHARED
+add_library(dhun_analysis SHARED
     ${DOLLBLOOM_NATIVE_DIR}/analyzer/audio_analysis.cpp
     ${DOLLBLOOM_NATIVE_DIR}/analyzer/tempo_analysis.cpp
     ${DOLLBLOOM_NATIVE_DIR}/analyzer/resampler.cpp
@@ -31,19 +31,19 @@ add_library(dollbloom_analysis SHARED
     jni/vocal_jni.cpp
 )
 
-target_include_directories(dollbloom_analysis PRIVATE
+target_include_directories(dhun_analysis PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${DOLLBLOOM_NATIVE_DIR}
 )
 
 # -ffast-math is deliberately NOT enabled: the analyzer's log/mel-adjacent
 # arithmetic (see audio_analysis.cpp) is tuned against exact IEEE behaviour.
-target_compile_options(dollbloom_analysis PRIVATE -O3 -fvisibility=hidden)
+target_compile_options(dhun_analysis PRIVATE -O3 -fvisibility=hidden)
 
 find_library(log-lib log)
-target_link_libraries(dollbloom_analysis ${log-lib})
+target_link_libraries(dhun_analysis ${log-lib})
 
 # 16KB page-size support (Android 15+ 16KB kernels, Play requirement): align
 # LOAD segments to 16KB. A superset of 4KB alignment, so 4KB devices are
 # unaffected. APK-side alignment of uncompressed .so files is handled by AGP.
-target_link_options(dollbloom_analysis PRIVATE "-Wl,-z,max-page-size=16384")
+target_link_options(dhun_analysis PRIVATE "-Wl,-z,max-page-size=16384")

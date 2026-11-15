@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp" android:height="64dp"
+    android:viewportWidth="64" android:viewportHeight="64">
+    <!-- Earbud cutouts remain transparent for themed launcher icons and UI tinting. -->
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd"
+        android:pathData="M22,53 L22,25 C22,14 28,9 35,10 C43,11 46,18 44,24 C42,30 35,32 30,28 L30,53 Z M39,16 C37,16 37,24 39,24 C41,24 41,16 39,16 Z M26,17 C27,14 29,13 31,13 C32,13 32,14 31,15 C29,15 28,16 27,18 Z M22,55 L30,55 C30,61 22,61 22,55 Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M7,39 H34 L37,34 L41,44 L45,28 L49,51 L53,35 L57,43 L60,39" />
+</vector>

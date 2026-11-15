@@ -162,7 +162,7 @@ if (!Regex("[A-Za-z0-9][A-Za-z0-9 ._+-]{0,63}").matches(appVersionName)) {
 val betaSuffix = ""
 
 android {
-    namespace = "com.doll.bloom"
+    namespace = "io.github.jaitak2121spec.dhun"
     // InnerTubeX's AAR requires compiling against 37; targetSdk (runtime behaviour) stays 36.
     compileSdk = 37
 
@@ -217,7 +217,7 @@ android {
     }
 
     // Dev and prod remain separate resource/configuration flavors, but every
-    // app variant intentionally keeps the same application ID: com.doll.bloom.
+    // app variant intentionally keeps the same application ID: io.github.jaitak2121spec.dhun.
     flavorDimensions += "env"
     productFlavors {
         create("dev") {
@@ -282,7 +282,7 @@ android {
         }
         /*
          * A release-like benchmark build of the dev flavor. It uses the same
-         * application ID (`com.doll.bloom`) as every other variant, so installing
+         * application ID (`io.github.jaitak2121spec.dhun`) as every other variant, so installing
          * it replaces whichever DollBloom variant is already on the device. It
          * uses the debug key and non-debuggable runtime to check R8 and measure
          * startup. `./gradlew installDevBenchmark`.
@@ -421,7 +421,7 @@ dependencies {
     // a camera scanner and an Activity with it, and nothing here reads a code —
     // a party is joined by tapping somebody else's link or typing six
     // characters. This produces the bit matrix; the drawing is ours, in
-    // [com.doll.bloom.ui.components.QrCode], so the result is styled like
+    // [io.github.jaitak2121spec.dhun.ui.components.QrCode], so the result is styled like
     // the rest of the app rather than a stock black-and-white bitmap.
     implementation("com.google.zxing:core:3.5.3")
 
@@ -518,10 +518,10 @@ val verifyDevInstall = tasks.register("verifyDevInstall") {
             .drop(1)
             .mapNotNull { line -> line.split('\t').takeIf { it.size == 2 && it[1] == "device" }?.get(0) }
         serials.forEach { serial ->
-            logger.lifecycle("verifyDevInstall: compiling com.doll.bloom on $serial")
+            logger.lifecycle("verifyDevInstall: compiling io.github.jaitak2121spec.dhun on $serial")
             ProcessBuilder(
                 adbPath, "-s", serial, "shell", "cmd", "package", "compile",
-                "-m", "verify", "-f", "com.doll.bloom",
+                "-m", "verify", "-f", "io.github.jaitak2121spec.dhun",
             ).inheritIO().start().waitFor()
         }
     }

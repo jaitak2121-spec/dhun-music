@@ -51,7 +51,7 @@ Windows:
 
 Run a specific test:
 ```bash
-./gradlew testDevDebugUnitTest --tests "com.doll.bloom.playback.audio.DirectAudioStreamingRegressionTest"
+./gradlew testDevDebugUnitTest --tests "io.github.jaitak2121spec.dhun.playback.audio.DirectAudioStreamingRegressionTest"
 ```
 
 ## Code Quality

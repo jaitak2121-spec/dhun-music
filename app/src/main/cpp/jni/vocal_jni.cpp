@@ -38,7 +38,7 @@ extern "C" {
 // mirroring the planar layout the front end wants and avoiding a deinterleave
 // on either side of the boundary.
 JNIEXPORT jfloatArray JNICALL
-Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeCompute(
+Java_io_github_jaitak2121spec_dhun_playback_smart_VocalSpectrogram_nativeCompute(
     JNIEnv* env,
     jclass /* clazz */,
     jfloatArray left,
@@ -66,25 +66,25 @@ Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeCompute(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeBins(
+Java_io_github_jaitak2121spec_dhun_playback_smart_VocalSpectrogram_nativeBins(
     JNIEnv* /* env */, jclass /* clazz */) {
   return static_cast<jint>(dollbloom::smart::kVocalSpectrogramBins);
 }
 
 JNIEXPORT jdouble JNICALL
-Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeSampleRate(
+Java_io_github_jaitak2121spec_dhun_playback_smart_VocalSpectrogram_nativeSampleRate(
     JNIEnv* /* env */, jclass /* clazz */) {
   return dollbloom::smart::kVocalSpectrogramSampleRate;
 }
 
 JNIEXPORT jint JNICALL
-Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeHop(
+Java_io_github_jaitak2121spec_dhun_playback_smart_VocalSpectrogram_nativeHop(
     JNIEnv* /* env */, jclass /* clazz */) {
   return static_cast<jint>(dollbloom::smart::kVocalSpectrogramHop);
 }
 
 JNIEXPORT jint JNICALL
-Java_com_doll_bloom_playback_smart_VocalSpectrogram_nativeFftSize(
+Java_io_github_jaitak2121spec_dhun_playback_smart_VocalSpectrogram_nativeFftSize(
     JNIEnv* /* env */, jclass /* clazz */) {
   return static_cast<jint>(dollbloom::smart::kVocalSpectrogramFft);
 }

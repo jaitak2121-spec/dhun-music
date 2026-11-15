@@ -1,27 +1,23 @@
-# Dhun identity exploration
+# Dhun design system
 
-Status: awaiting owner selection. Neither direction is approved or integrated.
+Owner direction: black and white is the default. Indigo remains an optional theme. The owner approved the earbud-and-waveform logo reference and requested implementation on November 15, 2026.
 
-## A — Pulse
+## Appearance
 
-Modern, expressive and colourful. A flowing D-shaped wave, a lowercase `dhun` wordmark, violet #8B5CF6 and coral #FF7A85 on ink #121018. Off-white text #F8F5FF.
+Settings → Appearance has independent light/dark/system mode and colour palette controls. Mono is the default; Indigo and Forest are optional. The existing preference store persists both choices and includes them in its settings backup. Unknown palette names fall back to Mono.
 
-Home: a personal greeting, a featured listening mix, compact recently played cards and mood chips. Bottom navigation: Home, Search, Library. Now playing keeps large artwork, clear transport controls and one-tap lyrics/queue.
+Mono uses neutral grey surfaces and platform sans-serif typography. Indigo uses navy #111B35 and periwinkle #A5B4FC in dark mode, with a stronger blue accent in light mode. Forest uses deep green #0E2420 and sage #B9CBB1 in dark mode, with cream and deep green in light mode. Artwork and artwork-derived player backgrounds retain their original colours.
 
-## B — Still
+## Logo
 
-Quiet, warm and premium. A simple continuous-line D monogram, a lowercase `dhun` wordmark, forest #173F35 on cream #F4F0E6 with sage #B9CBB1. Dark mode reverses cream and forest roles.
+- Approved reference reconstruction: `assets/brand/dhun-monochrome-logo-v1.png`.
+- Scalable icon: `assets/brand/dhun-icon.svg`.
+- Export: `assets/brand/dhun-icon.png` (1024 × 1024).
+- Android vector: `app/src/main/res/drawable/ic_dhun_mark.xml`.
+- Android adaptive launcher: `app/src/main/res/mipmap-anydpi/dhun_launcher.xml`.
 
-Same information architecture as A so the choice is about identity, not missing functionality. More space, quieter cards and restrained motion.
+The vector is a simplified hand-drawn implementation of the approved mark, not an automatic trace. The launcher supports standard masks and Android's monochrome themed-icon layer. The home header uses the same mark, tinted to the active foreground colour.
 
-## Customization to preserve
+## Verification remaining
 
-Existing light/dark/system mode, artwork-derived player colours, reduced animation, lyrics settings and playback preferences. Reuse AppSettings rather than creating a second preference store.
-
-## Approval sequence
-
-1. Owner compares logo and home/player concept boards.
-2. Refine the chosen mark and colours with owner suggestions.
-3. Owner approves the final logo before launcher icons and splash branding change.
-4. Apply the selected system to Compose theme, home, navigation and player.
-5. Build and verify on Android before expanding to other screens.
+Build and device verification require JDK 17 and Android SDK/NDK. Review launcher masks, home layout, theme persistence, large font sizes and all three palettes in light/dark modes on a device before release.
