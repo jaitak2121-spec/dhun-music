@@ -57,6 +57,10 @@ class DhunIdentityTest(unittest.TestCase):
         for source in (ROOT / "app/src").glob("**/*.xml"):
             ET.parse(source)
 
+    def test_active_ui_does_not_use_archived_brand_images(self):
+        for source in JAVA.rglob("*.kt"):
+            self.assertNotRegex(source.read_text(), r"R\.drawable\.(ic_wordmark|ic_logo|ic_notification_logo)\b", str(source))
+
     def test_localized_resources_cover_all_translatable_labels(self):
         resources = ROOT / "app/src/main/res"
         def keys(source):

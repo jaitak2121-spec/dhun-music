@@ -223,7 +223,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            resValue("string", "app_name", "Dhun Dev")
+            resValue("string", "app_name", "Dhun")
         }
         create("prod") {
             dimension = "env"
@@ -232,6 +232,13 @@ android {
     }
 
     signingConfigs {
+        // Intentionally non-secret test identity so successive previews install as updates.
+        getByName("debug") {
+            storeFile = rootProject.file("signing/dhun-debug.jks")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         // Both halves have to be there, not just the properties file: it *names*
         // the keystore rather than containing it, and both are gitignored
         // separately, so a checkout can easily end up with the one and not the

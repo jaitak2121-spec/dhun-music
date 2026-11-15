@@ -1322,4 +1322,10 @@
     <string name="color_theme_indigo">Indigo</string>
     <string name="color_theme_forest">Hutan</string>
     <string name="dhun_home_tagline">Musikmu. Iramamu.</string>
+    <string name="discovery_title">Temukan iramamu</string>
+    <string name="discovery_subtitle">Pilih suasana hati dan temukan musik baru.</string>
+    <string name="discovery_focus">Fokus</string>
+    <string name="discovery_unwind">Santai</string>
+    <string name="discovery_energy">Energi</string>
+    <string name="discovery_acoustic">Akustik</string>
 </resources>

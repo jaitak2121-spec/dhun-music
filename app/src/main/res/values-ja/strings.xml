@@ -1323,4 +1323,10 @@
     <string name="color_theme_indigo">インディゴ</string>
     <string name="color_theme_forest">フォレスト</string>
     <string name="dhun_home_tagline">あなたの音楽。あなたのリズム。</string>
+    <string name="discovery_title">自分のリズムを見つけよう</string>
+    <string name="discovery_subtitle">気分を選んで、新しい音楽に出会おう。</string>
+    <string name="discovery_focus">集中</string>
+    <string name="discovery_unwind">リラックス</string>
+    <string name="discovery_energy">エネルギー</string>
+    <string name="discovery_acoustic">アコースティック</string>
 </resources>

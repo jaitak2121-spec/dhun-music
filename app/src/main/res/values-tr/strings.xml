@@ -1297,4 +1297,10 @@
     <string name="color_theme_indigo">İndigo</string>
     <string name="color_theme_forest">Orman</string>
     <string name="dhun_home_tagline">Senin müziğin. Senin ritmin.</string>
+    <string name="discovery_title">Ritmini bul</string>
+    <string name="discovery_subtitle">Ruh halini seç ve yeni müzikler keşfet.</string>
+    <string name="discovery_focus">Odak</string>
+    <string name="discovery_unwind">Rahatla</string>
+    <string name="discovery_energy">Enerji</string>
+    <string name="discovery_acoustic">Akustik</string>
 </resources>

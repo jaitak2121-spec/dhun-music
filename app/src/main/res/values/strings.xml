@@ -1179,4 +1179,10 @@
     <string name="source_downloads_off">Streaming only</string>
     <string name="lossless_output_permission">Check Bluetooth codec</string>
     <string name="lossless_output_permission_detail">Allow Nearby devices so LDAC, LHDC or Samsung UHQ headphones can unlock lossless-only addons</string>
+    <string name="discovery_title">Find your rhythm</string>
+    <string name="discovery_subtitle">Choose a mood. Make the next discovery yours.</string>
+    <string name="discovery_focus">Focus</string>
+    <string name="discovery_unwind">Unwind</string>
+    <string name="discovery_energy">Energy</string>
+    <string name="discovery_acoustic">Acoustic</string>
 </resources>

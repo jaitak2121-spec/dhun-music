@@ -1264,4 +1264,10 @@
     <string name="color_theme_indigo">Chàm</string>
     <string name="color_theme_forest">Rừng</string>
     <string name="dhun_home_tagline">Âm nhạc của bạn. Nhịp điệu của bạn.</string>
+    <string name="discovery_title">Tìm nhịp điệu của bạn</string>
+    <string name="discovery_subtitle">Chọn tâm trạng và khám phá âm nhạc mới.</string>
+    <string name="discovery_focus">Tập trung</string>
+    <string name="discovery_unwind">Thư giãn</string>
+    <string name="discovery_energy">Năng lượng</string>
+    <string name="discovery_acoustic">Mộc</string>
 </resources>

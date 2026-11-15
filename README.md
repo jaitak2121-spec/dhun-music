@@ -8,9 +8,11 @@ A personal Android music experience. Your music. Your rhythm.
 
 [**Download Dhun for Android — debug APK (ZIP)**](https://github.com/jaitak2121-spec/dhun-music/actions/runs/43719573925/artifacts/14164590453)
 
-Extract the ZIP and install the APK on an Android 8.0 or newer ARM phone. This is a development build; not every inherited feature has been verified on a device.
+Install the APK on an Android 8.0 or newer ARM phone. This is a development build; not every inherited feature has been verified on a device.
 
-Sign in to GitHub with access to this private repository to download. This artifact expires three days after the build. For newer builds, open [Dhun Android Check](https://github.com/jaitak2121-spec/dhun-music/actions/workflows/android-check.yml), select a successful run, and download its `dhun-debug` artifact.
+Sign in to GitHub with access to this private repository to download. Tested main-branch builds are also published as direct `Dhun.apk` assets in [Releases](https://github.com/jaitak2121-spec/dhun-music/releases); release downloads have no three-day expiry.
+
+Current previews use a consistent, development-only signing identity. If Android refuses to update an older preview, back up your settings and downloads before uninstalling it once. See [preview signing](signing/DHUN_DEVELOPMENT.md). Future previews with this identity can install as updates.
 
 ## Development
 
@@ -22,7 +24,7 @@ Sign in to GitHub with access to this private repository to download. This artif
 
 ## Test builds
 
-The **Dhun Android Check** workflow builds the development APK and runs unit tests on pushes and pull requests to `main`. A manual run is available from Actions. Download `dhun-debug` from the run's artifacts to install the universal debug APK. Artifacts expire after three days. This workflow does not publish releases or use production signing keys.
+The **Dhun Android Check** workflow builds the development APK and runs unit tests on pushes and pull requests to `main`. Successful main-branch builds publish a private prerelease with a direct `Dhun.apk` asset. A manual run is available from Actions. The separate ZIP artifacts expire after three days; prerelease assets do not. Production signing keys are not used.
 
 The Genius live-service test is opt-in because it depends on an external website. Run it with `DHUN_LIVE_TESTS=1 ./gradlew --no-daemon testDevDebugUnitTest --tests '*GeniusTest' --rerun-tasks`. Its fixture-based parsing tests run in the normal suite.
 
@@ -34,6 +36,7 @@ The Genius live-service test is opt-in because it depends on an external website
 - Platform sans-serif typography and a Dhun home header.
 - Brief logo-and-ripple launch reveal, home-feed fades, animated play/pause icons and sliding settings selectors. New motion respects Reduce animation and the Android animator setting.
 - Theme choices persist across restarts and participate in settings backups.
+- Guest discovery uses native mood cards with music searches, rather than generic regional video charts. Sign in for account-based recommendations; regional music remains available in Search and Explore.
 
 ## Development status
 

@@ -34,6 +34,9 @@ keystore.properties
 *.jks
 *.keystore
 
+# Public development-only signing identity; never use it for a production release.
+!signing/dhun-debug.jks
+
 # Project scratch / debug artifacts
 .shots/
 .tmp_verify/

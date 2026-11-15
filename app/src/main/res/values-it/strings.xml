@@ -1281,4 +1281,10 @@
     <string name="color_theme_indigo">Indaco</string>
     <string name="color_theme_forest">Foresta</string>
     <string name="dhun_home_tagline">La tua musica. Il tuo ritmo.</string>
+    <string name="discovery_title">Trova il tuo ritmo</string>
+    <string name="discovery_subtitle">Scegli un’atmosfera e scopri nuova musica.</string>
+    <string name="discovery_focus">Concentrazione</string>
+    <string name="discovery_unwind">Relax</string>
+    <string name="discovery_energy">Energia</string>
+    <string name="discovery_acoustic">Acustica</string>
 </resources>

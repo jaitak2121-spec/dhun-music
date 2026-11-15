@@ -1347,4 +1347,10 @@
     <string name="color_theme_indigo">אינדיגו</string>
     <string name="color_theme_forest">יער</string>
     <string name="dhun_home_tagline">המוזיקה שלכם. הקצב שלכם.</string>
+    <string name="discovery_title">מצאו את הקצב שלכם</string>
+    <string name="discovery_subtitle">בחרו אווירה וגלו מוזיקה חדשה.</string>
+    <string name="discovery_focus">ריכוז</string>
+    <string name="discovery_unwind">רוגע</string>
+    <string name="discovery_energy">אנרגיה</string>
+    <string name="discovery_acoustic">אקוסטי</string>
 </resources>

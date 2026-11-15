@@ -1329,4 +1329,10 @@
     <string name="color_theme_indigo">อินดิโก</string>
     <string name="color_theme_forest">ป่า</string>
     <string name="dhun_home_tagline">เพลงของคุณ จังหวะของคุณ</string>
+    <string name="discovery_title">ค้นหาจังหวะของคุณ</string>
+    <string name="discovery_subtitle">เลือกอารมณ์แล้วค้นพบเพลงใหม่ในแบบของคุณ</string>
+    <string name="discovery_focus">สมาธิ</string>
+    <string name="discovery_unwind">ผ่อนคลาย</string>
+    <string name="discovery_energy">พลัง</string>
+    <string name="discovery_acoustic">อะคูสติก</string>
 </resources>

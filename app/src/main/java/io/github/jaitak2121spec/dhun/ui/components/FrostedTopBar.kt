@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.max
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
-import io.github.jaitak2121spec.dhun.BuildConfig
 import io.github.jaitak2121spec.dhun.R
 import io.github.jaitak2121spec.dhun.data.model.Account
 import io.github.jaitak2121spec.dhun.data.settings.AppSettings
@@ -314,24 +313,16 @@ fun FrostedTopBar(
                         .padding(start = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_wordmark),
+                    Icon(
+                        painter = painterResource(R.drawable.ic_dhun_mark),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
-                        modifier = Modifier.height(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(30.dp),
                     )
-                    // The dev flavor gets its own applicationId so it can sit
-                    // installed next to the prod build; this badge is the
-                    // in-app equivalent, so the two are never mixed up at a
-                    // glance once both are running.
-                    if (BuildConfig.FLAVOR == "dev") {
-                        Text(
-                            text = "Dev",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 6.dp),
-                        )
-                    }
+                    Text("dhun", style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 6.dp))
                 }
             }
             if (useFloatingChrome) {
@@ -392,14 +383,8 @@ private fun FloatingAppMark(
                 modifier = Modifier.size(20.dp),
             )
         }
-        if (BuildConfig.FLAVOR == "dev") {
-            Text(
-                text = "Dev",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 6.dp),
-            )
-        }
+        Text("dhun", style = MaterialTheme.typography.titleLarge,
+            color = contentColor, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

@@ -1380,4 +1380,10 @@
     <string name="color_theme_indigo">Indygo</string>
     <string name="color_theme_forest">Las</string>
     <string name="dhun_home_tagline">Twoja muzyka. Twój rytm.</string>
+    <string name="discovery_title">Znajdź swój rytm</string>
+    <string name="discovery_subtitle">Wybierz nastrój i odkryj coś nowego.</string>
+    <string name="discovery_focus">Skupienie</string>
+    <string name="discovery_unwind">Relaks</string>
+    <string name="discovery_energy">Energia</string>
+    <string name="discovery_acoustic">Akustycznie</string>
 </resources>

@@ -1342,4 +1342,10 @@
     <string name="color_theme_indigo">Indigo</string>
     <string name="color_theme_forest">Wald</string>
     <string name="dhun_home_tagline">Deine Musik. Dein Rhythmus.</string>
+    <string name="discovery_title">Finde deinen Rhythmus</string>
+    <string name="discovery_subtitle">Wähle eine Stimmung und entdecke neue Musik.</string>
+    <string name="discovery_focus">Fokus</string>
+    <string name="discovery_unwind">Entspannung</string>
+    <string name="discovery_energy">Energie</string>
+    <string name="discovery_acoustic">Akustik</string>
 </resources>

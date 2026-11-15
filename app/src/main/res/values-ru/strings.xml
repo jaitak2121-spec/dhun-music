@@ -1368,4 +1368,10 @@
     <string name="color_theme_indigo">Индиго</string>
     <string name="color_theme_forest">Лес</string>
     <string name="dhun_home_tagline">Ваша музыка. Ваш ритм.</string>
+    <string name="discovery_title">Найдите свой ритм</string>
+    <string name="discovery_subtitle">Выберите настроение и откройте новую музыку.</string>
+    <string name="discovery_focus">Фокус</string>
+    <string name="discovery_unwind">Отдых</string>
+    <string name="discovery_energy">Энергия</string>
+    <string name="discovery_acoustic">Акустика</string>
 </resources>

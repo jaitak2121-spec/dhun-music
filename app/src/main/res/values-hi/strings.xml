@@ -1342,4 +1342,10 @@
     <string name="color_theme_indigo">इंडिगो</string>
     <string name="color_theme_forest">वन</string>
     <string name="dhun_home_tagline">आपका संगीत। आपकी लय।</string>
+    <string name="discovery_title">अपनी लय खोजें</string>
+    <string name="discovery_subtitle">अपना मूड चुनें और नया संगीत खोजें।</string>
+    <string name="discovery_focus">एकाग्रता</string>
+    <string name="discovery_unwind">सुकून</string>
+    <string name="discovery_energy">ऊर्जा</string>
+    <string name="discovery_acoustic">अकूस्टिक</string>
 </resources>

@@ -2721,6 +2721,10 @@ private fun DhunApp(
                             title = stringResource(R.string.listen_now),
                             signedIn = signedIn,
                             onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                            onDiscover = { query ->
+                                viewModel.searchFor(query, SearchFilter.SONGS)
+                                selectedTab = TAB_SEARCH
+                            },
                             onItemClick = { item, shelfTitle ->
                                 val song = shelfSong(item)
                                 when {

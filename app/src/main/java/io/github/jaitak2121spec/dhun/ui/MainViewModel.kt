@@ -1423,6 +1423,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         homeSeenTitles.clear()
         _homeLoadingMore.value = false
         _homeRecentlyPlayedLoading.value = _signedIn.value
+        if (!_signedIn.value) {
+            // Guest discovery is intent-led; do not label regional trend feeds as personal picks.
+            _homePendingShelves.value = 0
+            _home.value = UiState.Success(emptyList())
+            return
+        }
         // The core feed plus one browse per supplement. Recently played is left
         // out: it has its own skeleton at the head of the page rather than the
         // one at the tail.
@@ -1503,6 +1509,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Refreshes the core feed without blanking the current Play page first. */
     private suspend fun refreshHome(identity: String?) = coroutineScope {
+        if (!_signedIn.value) {
+            _home.value = UiState.Success(emptyList())
+            return@coroutineScope
+        }
         val recent = if (_signedIn.value) async { YtMusicRepository.homeRecentlyPlayed() } else null
         YtMusicRepository.home().onSuccess { feed ->
             if (identity != listenerKey()) return@onSuccess
@@ -1703,7 +1713,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * ensures the saved entity carries real artwork and metadata instead of
      * a blank placeholder.
      */
-    fun searchFor(term: String) {
+    fun searchFor(term: String, filter: SearchFilter? = null) {
+        if (filter != null) _filter.value = filter
         _query.value = term
         searchSubmitted = true
         _suggestions.value = emptyList()

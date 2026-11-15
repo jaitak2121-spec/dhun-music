@@ -1322,4 +1322,10 @@
     <string name="color_theme_indigo">靛蓝</string>
     <string name="color_theme_forest">森林</string>
     <string name="dhun_home_tagline">你的音乐。你的节奏。</string>
+    <string name="discovery_title">找到你的节奏</string>
+    <string name="discovery_subtitle">选择心情，发现属于你的新音乐。</string>
+    <string name="discovery_focus">专注</string>
+    <string name="discovery_unwind">放松</string>
+    <string name="discovery_energy">活力</string>
+    <string name="discovery_acoustic">原声</string>
 </resources>

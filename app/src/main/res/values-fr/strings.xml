@@ -1343,4 +1343,10 @@
     <string name="color_theme_indigo">Indigo</string>
     <string name="color_theme_forest">Forêt</string>
     <string name="dhun_home_tagline">Votre musique. Votre rythme.</string>
+    <string name="discovery_title">Trouvez votre rythme</string>
+    <string name="discovery_subtitle">Choisissez une ambiance et faites une nouvelle découverte.</string>
+    <string name="discovery_focus">Concentration</string>
+    <string name="discovery_unwind">Détente</string>
+    <string name="discovery_energy">Énergie</string>
+    <string name="discovery_acoustic">Acoustique</string>
 </resources>
