@@ -2,6 +2,7 @@ package io.github.jaitak2121spec.dhun.data
 
 import io.github.jaitak2121spec.dhun.data.model.HomeShelf
 import io.github.jaitak2121spec.dhun.data.model.Song
+import io.github.jaitak2121spec.dhun.playback.QueueBuilder
 import java.util.Locale
 
 /** Explicit musical preferences, independent of Google or Dhun account identity. */
@@ -22,19 +23,15 @@ data class DiscoveryTaste(val language: String = "", val artists: String = "", v
 fun diverseDiscovery(batches: List<List<Song>>, excluded: Set<String> = emptySet(), limit: Int = 18): List<Song> {
     if (limit <= 0) return emptyList()
     val ids = excluded.toMutableSet()
-    val recordings = mutableSetOf<String>()
     val artists = mutableMapOf<String, Int>()
     val result = mutableListOf<Song>()
     val longest = batches.maxOfOrNull { it.size } ?: 0
     for (index in 0 until longest) for (batch in batches) {
         val song = batch.getOrNull(index) ?: continue
         if (!song.videoId.matches(Regex("^[A-Za-z0-9_-]{11}$")) || song.localUri != null || song.localPath != null) continue
-        val artist = song.artist.trim().lowercase(Locale.ROOT)
-        val title = song.title.lowercase(Locale.ROOT).replace(Regex("\\([^)]*(official|lyrics?|audio|video)[^)]*\\)|\\[[^]]*(official|lyrics?|audio|video)[^]]*]"), "")
-            .replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
-        val recording = "$artist:$title"
-        if (song.videoId in ids || recording in recordings || artists.getOrDefault(artist, 0) >= 3) continue
-        ids.add(song.videoId); recordings.add(recording); artists[artist] = artists.getOrDefault(artist, 0) + 1
+        val artist = QueueBuilder.artistSet(song.artist).minOrNull().orEmpty()
+        if (song.videoId in ids || result.any { QueueBuilder.isSameRecording(it, song) } || artists.getOrDefault(artist, 0) >= 3) continue
+        ids.add(song.videoId); artists[artist] = artists.getOrDefault(artist, 0) + 1
         result.add(song)
         if (result.size >= limit) return result
     }
