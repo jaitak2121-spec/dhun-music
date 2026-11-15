@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validId, searchTerm, tracksFromSearch, RELEASES } from './model.mjs';
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
+import { cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const player = path.join(app.isPackaged ? process.resourcesPath : path.join(root, 'resources'), 'player', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
@@ -83,6 +84,21 @@ try {
   if (Array.isArray(saved)) for (const [id, file] of saved) if (typeof id === 'string' && typeof file === 'string') localFiles.set(id, file);
 } catch { /* First launch: no imported files. */ }
 protocol.handle('dhun', serve);
+handle('cloudStatus',cloudStatus);
+handle('cloudConnect',cloudConnect);
+handle('cloudPoll',cloudPoll);
+handle('cloudBackup',cloudBackup);
+handle('cloudUpload',async backup=>{
+  const result=await dialog.showMessageBox(window,{type:'question',title:'Upload Dhun backup?',message:'Replace your cloud backup with this device’s online favourites and appearance settings?',detail:'Local music files and listening history are excluded. Other devices can restore this backup. Your existing cloud backup will be replaced.',buttons:['Cancel','Upload backup'],defaultId:0,cancelId:0});
+  if(result.response!==1)return{cancelled:true};return cloudUpload(backup);
+});
+handle('cloudRestore',async()=>{
+  const data=await cloudBackup();if(!data.profile?.preferences)throw Error('There is no saved backup to restore.');
+  const result=await dialog.showMessageBox(window,{type:'question',title:'Restore Dhun backup?',message:`Merge ${data.profile.favourites.length} cloud favourites into this device and restore appearance settings?`,detail:'Existing favourites and local music are kept. Duplicate songs are merged. No music files will be deleted.',buttons:['Cancel','Restore backup'],defaultId:0,cancelId:0});
+  return result.response===1?data:{cancelled:true};
+});
+handle('cloudDisconnect',cloudDisconnect);
+handle('cloudManage',cloudManage);
 session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
 session.defaultSession.setPermissionCheckHandler(() => false);
 handle('search', async value => tracksFromSearch(JSON.parse(await extract(['--flat-playlist', '--dump-single-json', '--', `ytsearch18:${searchTerm(value)} music`], true))));

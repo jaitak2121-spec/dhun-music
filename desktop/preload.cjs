@@ -9,4 +9,12 @@ contextBridge.exposeInMainWorld('dhun', Object.freeze({
   version: () => ipcRenderer.invoke('dhun:version'),
   updates: () => ipcRenderer.invoke('dhun:updates'),
   downloadUpdate: () => ipcRenderer.invoke('dhun:downloadUpdate'),
+  cloudStatus: () => ipcRenderer.invoke('dhun:cloudStatus'),
+  cloudConnect: () => ipcRenderer.invoke('dhun:cloudConnect'),
+  cloudPoll: () => ipcRenderer.invoke('dhun:cloudPoll'),
+  cloudBackup: () => ipcRenderer.invoke('dhun:cloudBackup'),
+  cloudUpload: backup => ipcRenderer.invoke('dhun:cloudUpload',backup),
+  cloudRestore: () => ipcRenderer.invoke('dhun:cloudRestore'),
+  cloudDisconnect: () => ipcRenderer.invoke('dhun:cloudDisconnect'),
+  cloudManage: () => ipcRenderer.invoke('dhun:cloudManage'),
 }));

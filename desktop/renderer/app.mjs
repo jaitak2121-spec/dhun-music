@@ -298,10 +298,52 @@ audio.addEventListener('ended', safe(() => advance(1, true)));
 audio.addEventListener('error', () => { if (audio.getAttribute('src')) status(current()?.local ? 'This file is unavailable or its format is unsupported. Add it again from your device.' : 'This stream could not play. Try the song again or choose another result.'); });
 document.addEventListener('keydown', safe(async event => { if (event.code !== 'Space' || event.target.closest('input,select,textarea,button,dialog')) return; event.preventDefault(); await togglePlayback(); }));
 if ('mediaSession' in navigator) for (const [action, handler] of Object.entries({ play: safe(() => audio.play()), pause: () => audio.pause(), previoustrack: safe(() => advance(-1)), nexttrack: safe(() => advance(1)), seekto: details => { if (Number.isFinite(audio.duration)) audio.currentTime = details.seekTime; } })) navigator.mediaSession.setActionHandler(action, handler);
-$('#settings-open').addEventListener('click', () => $('#settings').showModal()); $('#settings-close').addEventListener('click', () => $('#settings').close());
+$('#settings-open').addEventListener('click', () => { $('#settings').showModal(); cloudAction(async()=>{const result=await request('cloudStatus');cloudConnected(result.connected);}); }); $('#settings-close').addEventListener('click', () => $('#settings').close());
 document.querySelectorAll('button[data-theme]').forEach(button => button.addEventListener('click', () => { theme = button.dataset.theme; applyTheme(); }));
 $('#appearance').addEventListener('change', event => { appearance = event.target.value; applyTheme(); }); $('#reduce-motion').addEventListener('change', () => { applyTheme(); if ($('#reduce-motion').checked) dismissIntro(); });
 $('#releases').addEventListener('click', safe(() => request('releases')));
+function cloudConnected(connected) {
+  $('#cloud-connect').hidden=connected;
+  for(const id of ['cloud-upload','cloud-restore','cloud-disconnect'])$(`#${id}`).hidden=!connected;
+  $('#cloud-status').textContent=connected?'Connected. Backups are manual; nothing uploads automatically.':'Not connected. Your library stays on this device.';
+}
+async function cloudAction(action) {
+  const buttons=['cloud-connect','cloud-upload','cloud-restore','cloud-disconnect','cloud-manage'].map(id=>$(`#${id}`));
+  buttons.forEach(button=>button.disabled=true);
+  try{await action();}catch(error){$('#cloud-status').textContent=error.message || 'Cloud request failed. Your local library is safe.';}
+  finally{buttons.forEach(button=>button.disabled=false);}
+}
+$('#cloud-connect').addEventListener('click',()=>cloudAction(async()=>{
+  const result=await request('cloudConnect');
+  $('#cloud-status').textContent=`In your browser, sign in and approve code ${result.code}. Keep settings open. Nothing is uploaded until you choose Upload backup.`;
+  for(let attempt=0;attempt<100;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,3000));
+    if(!$('#settings').open)return;
+    const connection=await request('cloudPoll');
+    if(connection.connected){cloudConnected(true);return;}
+  }
+  throw Error('Connection expired. Please connect again.');
+}));
+$('#cloud-upload').addEventListener('click',()=>cloudAction(async()=>{
+  const data=await request('cloudBackup');
+  if(!data.profile)throw Error('Enable your cloud backup in Privacy & manage data first.');
+  const favourites=state.favourites.filter(track=>!track.local&&/^[A-Za-z0-9_-]{11}$/.test(track.id)).map(track=>({videoId:track.id,title:track.title.slice(0,300),artist:track.artist.slice(0,200),durationSeconds:Number.isFinite(track.duration)?Math.min(86400,Math.max(0,track.duration)):0}));
+  const result=await request('cloudUpload',{revision:data.profile.revision,favourites,preferences:{theme,appearance,reduceMotion:$('#reduce-motion').checked}});
+  if(!result.cancelled)$('#cloud-status').textContent=`Backed up ${favourites.length} online favourites and appearance settings. Local files and history stayed on this device.`;
+}));
+$('#cloud-restore').addEventListener('click',()=>cloudAction(async()=>{
+  const data=await request('cloudRestore');if(data.cancelled)return;
+  const restored=data.profile.favourites.map(track=>({id:track.videoId,title:track.title,artist:track.artist,duration:track.durationSeconds,artwork:`https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg`}));
+  const merged=[...state.favourites,...restored.filter(track=>!state.favourites.some(item=>item.id===track.id))];
+  if(merged.length>1000)throw Error('Restoring would exceed 1,000 favourites. Remove some favourites and try again.');
+  if(!save('favourites',merged))throw Error('There is not enough device storage to restore this backup.');
+  state.favourites=merged;const p=data.profile.preferences;
+  theme=p.theme;appearance=p.appearance;$('#appearance').value=appearance;$('#reduce-motion').checked=p.reduceMotion;applyTheme();
+  updateLikes();if(state.view==='favourites')renderTracks();
+  $('#cloud-status').textContent='Backup restored. Existing favourites and local music were kept.';
+}));
+$('#cloud-disconnect').addEventListener('click',()=>cloudAction(async()=>{await request('cloudDisconnect');cloudConnected(false);}));
+$('#cloud-manage').addEventListener('click',()=>cloudAction(()=>request('cloudManage')));
 async function checkForUpdates(manual = false) {
   $('#check-updates').disabled = true;
   if (manual) $('#update-status').textContent = 'Checking for updates…';

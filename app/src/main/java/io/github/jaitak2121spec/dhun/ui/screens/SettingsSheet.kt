@@ -193,6 +193,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var showCloudBackup by remember { mutableStateOf(false) }
+    if (showCloudBackup) CloudBackupDialog(onDismiss = { showCloudBackup = false })
 
     val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
@@ -400,6 +402,9 @@ fun SettingsScreen(
 
         SearchableSettingsGroup(search) {
             val accountTitle = stringResource(R.string.account_integrations)
+            row("Dhun Cloud", "backup", "privacy", "account") {
+                SettingsRow(icon = Icons.Rounded.Person, title = "Dhun Cloud · optional", subtitle = "Back up appearance settings · manage your data", onClick = { showCloudBackup = true })
+            }
             // What the row opens is the scrobbling screen, so the services it
             // signs into are worth typing at this field even though none of
             // them is named on the row itself.

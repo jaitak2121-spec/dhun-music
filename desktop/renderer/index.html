@@ -67,11 +67,12 @@
     <fieldset><legend>Colour palette</legend><div class="theme-options"><button data-theme="monochrome" aria-pressed="true">Monochrome</button><button data-theme="indigo" aria-pressed="false">Indigo</button><button data-theme="forest" aria-pressed="false">Forest</button></div></fieldset>
     <div class="setting-row"><label for="appearance">Appearance</label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Follow system</option></select></div>
     <label class="setting-row" for="reduce-motion">Reduce animation<input type="checkbox" id="reduce-motion"></label>
+    <fieldset><legend>Dhun Cloud · optional</legend><p>Back up online favourites and appearance settings only when you choose. The Dhun owner can access your stored cloud data. Local files and listening history are excluded.</p><p id="cloud-status" role="status">Not connected. Your library stays on this device.</p><button id="cloud-connect" class="subtle">Connect account</button><button id="cloud-upload" class="subtle" hidden>Upload backup</button><button id="cloud-restore" class="subtle" hidden>Restore backup</button><button id="cloud-disconnect" class="subtle" hidden>Disconnect</button><button id="cloud-manage" class="subtle">Privacy &amp; manage data</button></fieldset>
     <div class="about"><strong>Dhun desktop preview</strong>
-      <p>Your music. Your rhythm. Account sign-in, offline YouTube downloads, and Automix are not included in this desktop preview.</p>
+      <p>Your music. Your rhythm. Optional Dhun Cloud backs up favourites and appearance. YouTube account sign-in, offline YouTube downloads, and Automix are not included in this desktop preview.</p>
       <button id="check-updates" class="subtle">Check for updates</button><p id="update-status" role="status"></p>
       <button id="releases" class="subtle">Downloads &amp; source <i data-icon="arrow"></i></button>
-      <p>Favourites and listening history stay on this device. Online lyrics searches send song details to LRCLIB.</p>
+      <p>Favourites stay on this device unless you choose to upload a cloud backup. Listening history stays local. Online lyrics searches send song details to LRCLIB.</p>
       <p>GPL-3.0 · Playback powered by yt-dlp · Online lyrics by LRCLIB.<br>Full licences, source provenance and credits are included with the app under licenses/NOTICE.md.</p>
     </div>
   </dialog>

@@ -21,6 +21,14 @@ Desktop installers are unsigned development previews, so Windows or macOS may wa
 
 Current previews use a consistent, development-only signing identity. If Android refuses to update an older preview, back up your settings and downloads before uninstalling it once. See [preview signing](signing/DHUN_DEVELOPMENT.md). Future previews with this identity can install as updates.
 
+## Optional Dhun Cloud
+
+New previews include an optional account connection under Settings → Dhun Cloud. Users sign in through the browser, verify their email, review the privacy notice and explicitly approve their device. Connecting never starts an automatic upload.
+
+Desktop can manually back up online favourites and appearance settings, and merge a restored backup while keeping local music. Android can upload and restore appearance settings while preserving favourites already in the cloud; it does not upload or modify YouTube likes. Listening history, Google credentials, YouTube cookies, audio files and local file paths are excluded. Device access is encrypted locally and expires after 30 days.
+
+The account portal provides data export, backup erasure and password-confirmed account deletion. The private owner dashboard shows opted-in accounts and backup counts. [Backend setup and preview limitations](cloud/README.md) document security, testing and the production email-delivery work remaining. Older installations must install the new preview to get these controls; they do not start sending data remotely.
+
 ## Development
 
 - Kotlin, Jetpack Compose, Media3, and native audio analysis.

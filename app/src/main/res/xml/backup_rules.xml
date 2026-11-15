@@ -9,6 +9,7 @@
    because they hold the same credentials in cleartext.
 -->
 <full-backup-content>
+    <exclude domain="sharedpref" path="dhun_cloud_session.xml" />
     <exclude domain="sharedpref" path="dollbloom_auth.xml" />
     <exclude domain="sharedpref" path="dollbloom_auth_plain.xml" />
     <exclude domain="sharedpref" path="dollbloom_sources.xml" />

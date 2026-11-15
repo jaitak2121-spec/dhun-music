@@ -1,7 +1,7 @@
 {
   "name": "dhun-desktop",
   "productName": "Dhun",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Your music. Your rhythm.",
   "author": "Dhun contributors",
   "license": "GPL-3.0-only",
@@ -23,26 +23,63 @@
   "build": {
     "appId": "io.github.jaitak2121spec.dhun.desktop",
     "asar": true,
-    "directories": { "output": "dist", "buildResources": "resources" },
-    "files": ["main.mjs", "preload.cjs", "model.mjs", "lyrics.mjs", "updates.mjs", "renderer/**/*", "package.json"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "main.mjs",
+      "preload.cjs",
+      "model.mjs",
+      "lyrics.mjs",
+      "updates.mjs",
+      "cloud.mjs",
+      "renderer/**/*",
+      "package.json"
+    ],
     "extraResources": [
-      { "from": "resources/player", "to": "player" },
-      { "from": "../LICENSE", "to": "licenses/Dhun-GPL-3.0.txt" },
-      { "from": "../NOTICE.md", "to": "licenses/NOTICE.md" },
-      { "from": "resources/THIRD_PARTY_LICENSES.txt", "to": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt" },
-      { "from": "resources/yt-dlp-LICENSE", "to": "licenses/yt-dlp-LICENSE" }
+      {
+        "from": "resources/player",
+        "to": "player"
+      },
+      {
+        "from": "../LICENSE",
+        "to": "licenses/Dhun-GPL-3.0.txt"
+      },
+      {
+        "from": "../NOTICE.md",
+        "to": "licenses/NOTICE.md"
+      },
+      {
+        "from": "resources/THIRD_PARTY_LICENSES.txt",
+        "to": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt"
+      },
+      {
+        "from": "resources/yt-dlp-LICENSE",
+        "to": "licenses/yt-dlp-LICENSE"
+      }
     ],
     "mac": {
       "category": "public.app-category.music",
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "resources/icon.icns",
       "identity": null,
       "minimumSystemVersion": "12.0",
       "artifactName": "Dhun-Mac-${arch}.dmg"
     },
-    "dmg": { "title": "Dhun", "window": { "width": 540, "height": 380 } },
+    "dmg": {
+      "title": "Dhun",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "resources/icon.ico",
       "artifactName": "Dhun-Windows-x64.exe"
     },

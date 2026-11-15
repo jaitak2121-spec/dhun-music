@@ -1,0 +1,27 @@
+{
+  "name": "dhun-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "test": "node --test test/*.test.mjs",
+    "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
+    "db:check": "node --env-file=.env.local scripts/check-db.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.1",
+    "@neon/auth": "0.8.2",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}
