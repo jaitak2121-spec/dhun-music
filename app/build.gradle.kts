@@ -167,7 +167,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.doll.bloom"
+        applicationId = "io.github.jaitak2121spec.dhun"
         // 26 keeps reach wide; real-time blur (RenderEffect) kicks in on API 31+,
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
@@ -222,7 +222,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            resValue("string", "app_name", "DollBloom 🌸 Dev")
+            resValue("string", "app_name", "Dhun Dev")
         }
         create("prod") {
             dimension = "env"
