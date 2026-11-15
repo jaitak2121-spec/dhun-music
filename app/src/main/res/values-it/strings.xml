@@ -1275,4 +1275,10 @@
     <string name="source_downloads_off">Solo streaming</string>
     <string name="lossless_output_permission">Controlla codec Bluetooth</string>
     <string name="lossless_output_permission_detail">Consenti Dispositivi nelle vicinanze perché le cuffie LDAC o LHDC sblocchino i componenti lossless</string>
+    <string name="color_theme">Tema colore</string>
+    <string name="color_theme_description">Personalizza Dhun. Scegli i colori indipendentemente dalla modalità chiara o scura.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">Indaco</string>
+    <string name="color_theme_forest">Foresta</string>
+    <string name="dhun_home_tagline">La tua musica. Il tuo ritmo.</string>
 </resources>

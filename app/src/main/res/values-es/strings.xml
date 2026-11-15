@@ -1308,4 +1308,10 @@
     <string name="source_downloads_off">Solo streaming</string>
     <string name="lossless_output_permission">Comprobar códec Bluetooth</string>
     <string name="lossless_output_permission_detail">Permite Dispositivos cercanos para que los auriculares LDAC o LHDC desbloqueen los complementos sin pérdida</string>
+    <string name="color_theme">Tema de color</string>
+    <string name="color_theme_description">Personaliza Dhun. Elige los colores independientemente del modo claro u oscuro.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">Índigo</string>
+    <string name="color_theme_forest">Bosque</string>
+    <string name="dhun_home_tagline">Tu música. Tu ritmo.</string>
 </resources>

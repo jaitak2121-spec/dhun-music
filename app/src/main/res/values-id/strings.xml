@@ -1316,4 +1316,10 @@
     <string name="source_downloads_off">Hanya streaming</string>
     <string name="lossless_output_permission">Periksa codec Bluetooth</string>
     <string name="lossless_output_permission_detail">Izinkan Perangkat di sekitar agar headphone LDAC atau LHDC bisa membuka addon lossless</string>
+    <string name="color_theme">Tema warna</string>
+    <string name="color_theme_description">Sesuaikan Dhun. Pilih warna secara terpisah dari mode terang atau gelap.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">Indigo</string>
+    <string name="color_theme_forest">Hutan</string>
+    <string name="dhun_home_tagline">Musikmu. Iramamu.</string>
 </resources>

@@ -16,6 +16,8 @@ A personal Android music experience. Your music. Your rhythm.
 
 The **Dhun Android Check** workflow builds the development APK and runs unit tests on pushes and pull requests to `main`. A manual run is available from Actions. Download `dhun-debug` from the run's artifacts to install the universal debug APK. Artifacts expire after three days. This workflow does not publish releases or use production signing keys.
 
+The Genius live-service test is opt-in because it depends on an external website. Run it with `DHUN_LIVE_TESTS=1 ./gradlew --no-daemon testDevDebugUnitTest --tests '*GeniusTest' --rerun-tasks`. Its fixture-based parsing tests run in the normal suite.
+
 ## Appearance
 
 - Black and white by default, with optional Indigo and Forest palettes.

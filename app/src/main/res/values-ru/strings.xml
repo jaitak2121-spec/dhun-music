@@ -1362,4 +1362,10 @@
     <string name="source_downloads_off">Только стриминг</string>
     <string name="lossless_output_permission">Проверить Bluetooth-кодек</string>
     <string name="lossless_output_permission_detail">Разрешите доступ к устройствам поблизости, чтобы наушники LDAC или LHDC открыли аддоны без потерь</string>
+    <string name="color_theme">Цветовая тема</string>
+    <string name="color_theme_description">Настройте Dhun под себя. Выбирайте цвета независимо от светлого или тёмного режима.</string>
+    <string name="color_theme_mono">Моно</string>
+    <string name="color_theme_indigo">Индиго</string>
+    <string name="color_theme_forest">Лес</string>
+    <string name="dhun_home_tagline">Ваша музыка. Ваш ритм.</string>
 </resources>

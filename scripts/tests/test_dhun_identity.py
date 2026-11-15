@@ -57,6 +57,16 @@ class DhunIdentityTest(unittest.TestCase):
         for source in (ROOT / "app/src").glob("**/*.xml"):
             ET.parse(source)
 
+    def test_localized_resources_cover_all_translatable_labels(self):
+        resources = ROOT / "app/src/main/res"
+        def keys(source):
+            return {node.get("name") for node in ET.parse(source).getroot()
+                    if node.tag in {"string", "plurals", "string-array"}
+                    and node.get("translatable") != "false"}
+        base = keys(resources / "values/strings.xml")
+        for source in resources.glob("values-*/strings.xml"):
+            self.assertFalse(base - keys(source), f"{source.parent.name}: {base - keys(source)}")
+
 
 if __name__ == "__main__":
     unittest.main()

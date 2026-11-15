@@ -1336,4 +1336,10 @@
     <string name="source_downloads_off">Nur Streaming</string>
     <string name="lossless_output_permission">Bluetooth-Codec prüfen</string>
     <string name="lossless_output_permission_detail">Geräte in der Nähe erlauben, damit LDAC- oder LHDC-Kopfhörer Lossless-Addons freischalten</string>
+    <string name="color_theme">Farbthema</string>
+    <string name="color_theme_description">Gestalte Dhun nach deinem Geschmack. Wähle Farben unabhängig vom hellen oder dunklen Modus.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">Indigo</string>
+    <string name="color_theme_forest">Wald</string>
+    <string name="dhun_home_tagline">Deine Musik. Dein Rhythmus.</string>
 </resources>

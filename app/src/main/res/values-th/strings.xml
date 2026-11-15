@@ -1323,4 +1323,10 @@
     <string name="source_downloads_off">สตรีมมิงเท่านั้น</string>
     <string name="lossless_output_permission">ตรวจสอบตัวแปลงสัญญาณ Bluetooth</string>
     <string name="lossless_output_permission_detail">อนุญาตอุปกรณ์ใกล้เคียงเพื่อให้หูฟัง LDAC หรือ LHDC ปลดล็อกส่วนเสริมแบบ lossless</string>
+    <string name="color_theme">ธีมสี</string>
+    <string name="color_theme_description">ปรับแต่ง Dhun ในแบบของคุณ เลือกสีแยกจากโหมดสว่างหรือมืด</string>
+    <string name="color_theme_mono">ขาวดำ</string>
+    <string name="color_theme_indigo">อินดิโก</string>
+    <string name="color_theme_forest">ป่า</string>
+    <string name="dhun_home_tagline">เพลงของคุณ จังหวะของคุณ</string>
 </resources>

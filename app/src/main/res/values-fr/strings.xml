@@ -1337,4 +1337,10 @@
     <string name="source_downloads_off">Streaming uniquement</string>
     <string name="lossless_output_permission">Vérifier le codec Bluetooth</string>
     <string name="lossless_output_permission_detail">Autorisez Appareils à proximité pour qu’un casque LDAC ou LHDC débloque les modules sans perte</string>
+    <string name="color_theme">Thème de couleur</string>
+    <string name="color_theme_description">Personnalisez Dhun. Choisissez les couleurs indépendamment du mode clair ou sombre.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">Indigo</string>
+    <string name="color_theme_forest">Forêt</string>
+    <string name="dhun_home_tagline">Votre musique. Votre rythme.</string>
 </resources>

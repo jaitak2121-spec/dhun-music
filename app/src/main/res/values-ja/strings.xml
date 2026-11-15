@@ -1317,4 +1317,10 @@
     <string name="source_downloads_off">ストリーミングのみ</string>
     <string name="lossless_output_permission">Bluetoothコーデックを確認</string>
     <string name="lossless_output_permission_detail">付近のデバイスを許可すると、LDACまたはLHDCのヘッドホンでロスレス専用アドオンを使えます</string>
+    <string name="color_theme">カラーテーマ</string>
+    <string name="color_theme_description">Dhunを自分らしく。ライト・ダークモードとは別に色を選べます。</string>
+    <string name="color_theme_mono">モノ</string>
+    <string name="color_theme_indigo">インディゴ</string>
+    <string name="color_theme_forest">フォレスト</string>
+    <string name="dhun_home_tagline">あなたの音楽。あなたのリズム。</string>
 </resources>

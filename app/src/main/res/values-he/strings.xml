@@ -1341,4 +1341,10 @@
     <string name="source_downloads_off">הזרמה בלבד</string>
     <string name="lossless_output_permission">בדיקת קודק Bluetooth</string>
     <string name="lossless_output_permission_detail">אפשרו מכשירים בקרבת מקום כדי שאוזניות LDAC או LHDC יפתחו תוספים ללא אובדן</string>
+    <string name="color_theme">ערכת צבעים</string>
+    <string name="color_theme_description">התאימו את Dhun לטעמכם. בחרו צבעים בנפרד מהמצב הבהיר או הכהה.</string>
+    <string name="color_theme_mono">מונו</string>
+    <string name="color_theme_indigo">אינדיגו</string>
+    <string name="color_theme_forest">יער</string>
+    <string name="dhun_home_tagline">המוזיקה שלכם. הקצב שלכם.</string>
 </resources>

@@ -1258,4 +1258,10 @@
     <string name="source_downloads_off">Chỉ phát trực tuyến</string>
     <string name="lossless_output_permission">Kiểm tra codec Bluetooth</string>
     <string name="lossless_output_permission_detail">Cho phép Thiết bị lân cận để tai nghe LDAC hoặc LHDC mở khóa addon lossless</string>
+    <string name="color_theme">Chủ đề màu</string>
+    <string name="color_theme_description">Cá nhân hóa Dhun. Chọn màu độc lập với chế độ sáng hoặc tối.</string>
+    <string name="color_theme_mono">Đơn sắc</string>
+    <string name="color_theme_indigo">Chàm</string>
+    <string name="color_theme_forest">Rừng</string>
+    <string name="dhun_home_tagline">Âm nhạc của bạn. Nhịp điệu của bạn.</string>
 </resources>

@@ -42,11 +42,12 @@ jobs:
       - name: Check identity migration and build-settings tooling
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build the debug app
+        id: build
         run: bash ./gradlew --no-daemon --max-workers=2 assembleDevDebug --stacktrace
       - name: Run Android unit tests
         run: bash ./gradlew --no-daemon --max-workers=2 testDevDebugUnitTest --stacktrace
       - name: Save the installable universal debug APK
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: dhun-debug

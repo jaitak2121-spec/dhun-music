@@ -1291,4 +1291,10 @@
     <string name="source_downloads_off">Yalnızca akış</string>
     <string name="lossless_output_permission">Bluetooth kodeğini kontrol et</string>
     <string name="lossless_output_permission_detail">LDAC veya LHDC kulaklıkların kayıpsız eklentileri açabilmesi için Yakındaki cihazlar iznini verin</string>
+    <string name="color_theme">Renk teması</string>
+    <string name="color_theme_description">Dhun uygulamasını kişiselleştir. Renkleri açık veya koyu moddan bağımsız seç.</string>
+    <string name="color_theme_mono">Mono</string>
+    <string name="color_theme_indigo">İndigo</string>
+    <string name="color_theme_forest">Orman</string>
+    <string name="dhun_home_tagline">Senin müziğin. Senin ritmin.</string>
 </resources>

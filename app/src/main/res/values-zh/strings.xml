@@ -1316,4 +1316,10 @@
     <string name="source_downloads_off">仅限在线播放</string>
     <string name="lossless_output_permission">检查蓝牙编解码器</string>
     <string name="lossless_output_permission_detail">允许“附近的设备”权限，LDAC 或 LHDC 耳机即可解锁仅限无损的插件</string>
+    <string name="color_theme">颜色主题</string>
+    <string name="color_theme_description">打造专属的 Dhun。独立于浅色或深色模式选择配色。</string>
+    <string name="color_theme_mono">黑白</string>
+    <string name="color_theme_indigo">靛蓝</string>
+    <string name="color_theme_forest">森林</string>
+    <string name="dhun_home_tagline">你的音乐。你的节奏。</string>
 </resources>
