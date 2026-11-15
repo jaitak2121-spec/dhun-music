@@ -6,7 +6,7 @@ A personal Android music experience. Your music. Your rhythm.
 
 ## Download
 
-[**Download Dhun for Android — debug APK (ZIP)**](https://github.com/jaitak2121-spec/dhun-music/actions/runs/43719573925/artifacts/14164590453)
+[**Download Dhun for Android — APK**](https://github.com/jaitak2121-spec/dhun-music/releases/download/preview-4/Dhun.apk)
 
 Install the APK on an Android 8.0 or newer ARM phone. This is a development build; not every inherited feature has been verified on a device.
 
