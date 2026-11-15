@@ -4,6 +4,14 @@ A personal Android music experience. Your music. Your rhythm.
 
 ![Dhun icon](assets/brand/dhun-icon.png)
 
+## Download
+
+[**Download Dhun for Android — debug APK (ZIP)**](https://github.com/jaitak2121-spec/dhun-music/actions/runs/43713526424/artifacts/14161995195)
+
+Extract the ZIP and install the APK on an Android 8.0 or newer ARM phone. This is a development build; not every inherited feature has been verified on a device.
+
+Sign in to GitHub with access to this private repository to download. This artifact expires three days after the build. For newer builds, open [Dhun Android Check](https://github.com/jaitak2121-spec/dhun-music/actions/workflows/android-check.yml), select a successful run, and download its `dhun-debug` artifact.
+
 ## Development
 
 - Kotlin, Jetpack Compose, Media3, and native audio analysis.
