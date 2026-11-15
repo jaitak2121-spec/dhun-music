@@ -92,6 +92,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: dhun-*
@@ -103,10 +104,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source:$source, run:$run, unsigned:true}' > installers/Desktop-build.json
+          VERSION="$(jq -r .version desktop/package.json)"
+          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg version "$VERSION" '{source:$source, run:$run, version:$version, unsigned:true}' > installers/Desktop-build.json
           (cd installers && sha256sum *.exe *.dmg > Desktop-SHA256SUMS.txt)
           TAG="desktop-${GITHUB_RUN_NUMBER}"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --prerelease --title "Dhun desktop preview ${GITHUB_RUN_NUMBER}" --notes "Windows x64 and macOS Apple Silicon / Intel installers. Unsigned development previews. Source: ${GITHUB_SHA}. GUI and local-audio smoke tests passed on all three runners; live streaming remains dependent on YouTube."
           gh release upload "$TAG" installers/* --clobber
-          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. This private repository requires GitHub access. Older versioned previews remain in Releases." || gh release view preview
-          gh release upload preview installers/* --clobber
+          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. Installers and corresponding source are publicly available. Older versioned previews remain in Releases." || gh release view preview
+          gh release upload preview installers/*.exe installers/*.dmg installers/Desktop-SHA256SUMS.txt --clobber
+          gh release upload preview installers/Desktop-build.json --clobber

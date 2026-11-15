@@ -17,6 +17,7 @@ const icons = {
   repeat: '<path d="M4 10V6h15m-4-4 4 4-4 4m5 4v4H5m4-4-4 4 4 4"/>',
   volume: '<path d="M3 9h4l5-5v16l-5-5H3Zm13-1a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
   close: '<path d="m6 6 12 12M6 18 18 6"/>', minus: '<path d="M5 12h14"/>',
+  lyrics: '<path d="M4 5h16M4 10h12M4 15h16M4 20h9"/>',
 };
 function icon(element, name) {
   // Only static, application-owned paths enter the SVG markup.
@@ -25,9 +26,10 @@ function icon(element, name) {
 document.querySelectorAll('[data-icon]').forEach(element => icon(element, element.dataset.icon));
 function node(tag, className, text) { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; }
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(`dhun.${key}`)) ?? fallback; } catch { return fallback; } }
-function save(key, value) { try { localStorage.setItem(`dhun.${key}`, JSON.stringify(value)); } catch { status('Device storage is full. Your latest changes could not be saved.'); } }
+function save(key, value) { try { localStorage.setItem(`dhun.${key}`, JSON.stringify(value)); return true; } catch { status('Device storage is full. Your latest changes could not be saved.'); return false; } }
 function storedTracks(key) { const tracks = read(key, []); return Array.isArray(tracks) ? tracks.filter(track => track && typeof track.id === 'string' && typeof track.title === 'string' && typeof track.artist === 'string').slice(0, 1000) : []; }
 const state = { view: 'discover', search: [], favourites: storedTracks('favourites'), recent: storedTracks('recent'), local: storedTracks('local'), queue: storedTracks('queue'), index: -1, shuffle: false, repeat: false, playing: false, resolving: false, generation: 0, searchGeneration: 0 };
+state.favourites = state.favourites.filter((track, index, all) => all.findIndex(item => item.id === track.id) === index);
 const audio = $('#audio');
 const preferences = read('preferences', {});
 let theme = ['monochrome', 'indigo', 'forest'].includes(preferences?.theme) ? preferences.theme : 'monochrome';
@@ -55,16 +57,22 @@ const safe = task => async (...args) => { try { await task(...args); } catch (er
 function time(value) { if (!Number.isFinite(value) || value < 0) return '0:00'; return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
 function current() { return state.queue[state.index]; }
 function isFavourite(track) { return state.favourites.some(item => item.id === track?.id); }
-function visibleTracks() { return state.view === 'search' ? state.search : state[state.view] || []; }
-const headings = { discover: ['WELCOME TO YOUR SPACE', 'Discover'], search: ['FIND WHAT MOVES YOU', 'Search music'], favourites: ['THE ONES YOU COME BACK TO', 'Your favourites'], recent: ['PICK UP THE FEELING', 'Recently played'], local: ['YOUR MUSIC, RIGHT HERE', 'On this device'], queue: ['KEEP THE FEELING GOING', 'Play queue'] };
+function visibleTracks() {
+  if (state.view === 'favourites') { const filter = $('#favourite-filter').value.trim().toLocaleLowerCase(); return state.favourites.filter(track => `${track.title} ${track.artist}`.toLocaleLowerCase().includes(filter)); }
+  return state.view === 'search' ? state.search : state[state.view] || [];
+}
+const headings = { discover: ['WELCOME TO YOUR SPACE', 'Discover'], search: ['FIND WHAT MOVES YOU', 'Search music'], favourites: ['THE ONES YOU COME BACK TO', 'Your favourites'], recent: ['PICK UP THE FEELING', 'Recently played'], local: ['YOUR MUSIC, RIGHT HERE', 'On this device'], queue: ['KEEP THE FEELING GOING', 'Play queue'], lyrics: ['EVERY WORD, EVERY FEELING', 'Lyrics'] };
 function showView(view, moveFocus = true) {
   state.view = view;
   const [kicker, title] = headings[view];
   $('#page-kicker').textContent = kicker; $('#page-title').textContent = title;
   document.title = `${title} · Dhun`;
-  $('#discovery').hidden = view !== 'discover'; $('#results').hidden = view === 'discover';
+  $('#discovery').hidden = view !== 'discover'; $('#results').hidden = view === 'discover' || view === 'lyrics';
+  $('#lyrics-view').hidden = view !== 'lyrics'; $('#library-tools').hidden = view !== 'favourites';
+  $('#show-lyrics').setAttribute('aria-pressed', String(view === 'lyrics'));
   document.querySelectorAll('[data-view]').forEach(button => view === button.dataset.view ? button.setAttribute('aria-current', 'page') : button.removeAttribute('aria-current'));
-  if (view !== 'discover') renderTracks();
+  if (view !== 'discover' && view !== 'lyrics') renderTracks();
+  if (view === 'lyrics') loadLyrics();
   if (moveFocus) (view === 'search' ? $('#query') : $('#page-title')).focus();
 }
 function artwork(track, className = 'cover') {
@@ -80,14 +88,48 @@ function iconButton(name, label, action, pressed) {
   if (pressed !== undefined) button.setAttribute('aria-pressed', String(pressed));
   button.addEventListener('click', safe(action)); return button;
 }
+let undoFavourites;
+let noticeTimeout;
+function updateLikes() {
+  $('#favourites-count').textContent = String(state.favourites.length);
+  document.querySelectorAll('[data-like-id]').forEach(button => {
+    const liked = state.favourites.some(track => track.id === button.dataset.likeId);
+    button.setAttribute('aria-pressed', String(liked));
+    button.title = liked ? 'Remove from favourites' : 'Save to favourites';
+  });
+  $('#now-like').setAttribute('aria-pressed', String(isFavourite(current())));
+  $('#now-like').title = isFavourite(current()) ? 'Remove from favourites' : 'Save to favourites';
+}
+function dismissFavouriteNotice() {
+  if ($('#favourite-notice').contains(document.activeElement)) ($('#now-like').disabled ? $('#page-title') : $('#now-like')).focus();
+  $('#favourite-notice').hidden = true; clearTimeout(noticeTimeout); undoFavourites = null;
+}
 function toggleFavourite(track) {
   if (!track) return;
-  state.favourites = isFavourite(track) ? state.favourites.filter(item => item.id !== track.id) : [track, ...state.favourites].slice(0, 1000);
-  save('favourites', state.favourites); updatePlayer(); renderTracks();
+  const liked = isFavourite(track);
+  if (!liked && state.favourites.length >= 1000) { status('Your library has reached 1,000 favourites. Remove one before adding another.'); return; }
+  const previous = state.favourites;
+  const next = liked ? previous.filter(item => item.id !== track.id) : [track, ...previous];
+  if (!save('favourites', next)) return;
+  state.favourites = next;
+  const focused = document.activeElement;
+  updateLikes();
+  if (state.view === 'favourites') {
+    const index = [...$('#tracks').children].findIndex(row => row.contains(focused));
+    renderTracks();
+    if (index >= 0) ($('#tracks').children[Math.min(index, $('#tracks').children.length - 1)]?.querySelector('[data-like-id]') || $('#page-title')).focus();
+  }
+  if (!liked && focused?.matches('[data-like-id],#now-like') && !systemMotion.matches && !$('#reduce-motion').checked) focused.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18)' }, { transform: 'scale(1)' }], { duration: 220 });
+  undoFavourites = previous;
+  $('#favourite-message').textContent = liked ? `Removed “${track.title}” from favourites.` : `Saved “${track.title}” to favourites on this device.`;
+  $('#favourite-notice').hidden = false;
+  clearTimeout(noticeTimeout); noticeTimeout = setTimeout(() => { if (!$('#favourite-notice').contains(document.activeElement)) dismissFavouriteNotice(); }, 8000);
 }
 function renderTracks() {
   const list = $('#tracks'); list.replaceChildren();
   const tracks = visibleTracks(); $('#empty').hidden = tracks.length > 0;
+  $('#empty-title').textContent = state.view === 'favourites' ? state.favourites.length ? 'No matching favourites' : 'Keep the songs you love' : 'Your soundtrack starts here';
+  $('#empty-description').textContent = state.view === 'favourites' ? state.favourites.length ? 'Try another song or artist name.' : 'Tap a heart beside a song to save it on this device.' : 'Search for music above, or add songs from your device.';
   tracks.forEach((track, index) => {
     const row = node('li', `track${current()?.id === track.id ? ' current' : ''}`);
     const play = node('button', 'track-play'); play.setAttribute('aria-label', `Play ${track.title}`);
@@ -97,16 +139,18 @@ function renderTracks() {
       await playAt(index);
     }));
     row.append(play, node('span', 'track-time', track.duration ? time(track.duration) : '—'));
-    row.append(iconButton('heart', `Favourite ${track.title}`, () => toggleFavourite(track), isFavourite(track)));
+    const heart = iconButton('heart', `Favourite ${track.title}`, () => toggleFavourite(track), isFavourite(track));
+    heart.dataset.likeId = track.id; row.append(heart);
     if (state.view === 'queue') row.append(iconButton('minus', `Remove ${track.title} from queue`, () => {
       state.queue.splice(index, 1);
-      if (index === state.index) { state.generation++; state.resolving = false; audio.pause(); audio.removeAttribute('src'); audio.load(); state.index = -1; state.playing = false; }
+      if (index === state.index) { state.generation++; state.resolving = false; audio.pause(); audio.removeAttribute('src'); audio.load(); state.index = -1; state.playing = false; resetLyrics(); if (state.view === 'lyrics') loadLyrics(); }
       else if (index < state.index) state.index--;
       save('queue', state.queue); updatePlayer(); renderTracks();
     }));
     else row.append(iconButton('plus', `Add ${track.title} to queue`, () => { state.queue.push(track); save('queue', state.queue); updatePlayer(); status(`Added ${track.title} to your queue.`); }));
     list.append(row);
   });
+  updateLikes();
 }
 function updatePlayer() {
   const track = current(); $('#queue-count').textContent = String(state.queue.length);
@@ -116,11 +160,13 @@ function updatePlayer() {
   $('#now-like').disabled = !track; $('#now-like').setAttribute('aria-pressed', String(isFavourite(track)));
   $('#play').setAttribute('aria-label', state.playing ? 'Pause' : 'Play'); icon($('#play i'), state.playing ? 'pause' : 'play');
   $('#shuffle').setAttribute('aria-pressed', String(state.shuffle)); $('#repeat').setAttribute('aria-pressed', String(state.repeat));
+  updateLikes();
 }
 async function playAt(index) {
   const track = state.queue[index]; if (!track) return;
   const generation = ++state.generation;
   audio.pause(); audio.removeAttribute('src'); audio.load(); state.index = index; state.resolving = true; status(); updatePlayer(); renderTracks();
+  resetLyrics(); if (state.view === 'lyrics') loadLyrics();
   try {
     const source = track.local ? `dhun://audio/${track.id}` : await request('stream', track.id);
     if (generation !== state.generation) return;
@@ -131,6 +177,65 @@ async function playAt(index) {
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist });
   } catch (error) { if (generation === state.generation) status(error.message || 'Playback failed. Try another track.'); }
   finally { if (generation === state.generation) { state.resolving = false; updatePlayer(); } }
+}
+let lyricGeneration = 0;
+let lyricTrackId = null;
+let lyricResult = null;
+let activeLine = -1;
+let followLyrics = true;
+function resetLyrics() {
+  lyricGeneration++; lyricTrackId = null; lyricResult = null; activeLine = -1;
+  $('#lyrics-lines').replaceChildren(); $('#lyrics-loading').hidden = true;
+}
+async function loadLyrics(override) {
+  const track = current();
+  if (!override && lyricTrackId === track?.id) return;
+  const generation = ++lyricGeneration;
+  lyricTrackId = track?.id || null; lyricResult = null; activeLine = -1;
+  $('#lyrics-lines').replaceChildren();
+  $('#lyrics-song').textContent = track?.title || 'Choose a song to see its lyrics';
+  $('#lyrics-credit').textContent = track ? `${track.artist} · Looking for lyrics` : 'Timed lyrics appear when available.';
+  $('#lyrics-message').textContent = track ? '' : 'Start a song, then open Lyrics.';
+  $('#follow-lyrics').disabled = true;
+  if (!track) return;
+  if (!override) { $('#lyrics-title').value = track.title; $('#lyrics-artist').value = track.local ? '' : track.artist.replace(/\s*-\s*Topic$/i, '').replace(/VEVO$/i, ''); }
+  $('#lyrics-loading').hidden = false;
+  try {
+    const result = await request('lyrics', override || { ...track, duration: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : track.duration });
+    if (generation !== lyricGeneration) return;
+    lyricResult = result;
+    $('#lyrics-credit').textContent = result ? `${result.artist || track.artist} · ${result.source} · ${result.synced ? 'Synced lyrics' : 'Plain lyrics'}` : 'Lyrics not available for this recording';
+    $('#lyrics-message').textContent = !result ? track.local ? 'No matching local .lrc file. You can search online by song title and artist below.' : 'No matching lyrics found. Try the title and artist search below.' : result.instrumental ? 'This recording is marked as instrumental.' : result.synced ? 'Select a line to jump to that moment.' : 'Timing is not available for these lyrics.';
+    $('#follow-lyrics').disabled = !result?.synced;
+    if (!result) return;
+    for (const line of result.lines) {
+      const element = node(result.synced ? 'button' : 'p', 'lyric-line', line.text || '♪'); element.dir = 'auto';
+      if (result.synced) { element.type = 'button'; element.setAttribute('aria-label', `${line.text || 'Instrumental break'}, ${time(line.time)}`); element.addEventListener('click', () => { if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(audio.duration, line.time); }); }
+      $('#lyrics-lines').append(element);
+    }
+    updateLyricPosition();
+  } catch (error) {
+    if (generation === lyricGeneration) { lyricTrackId = null; $('#lyrics-message').textContent = error.message || 'Lyrics could not load. Please try again.'; $('#lyrics-credit').textContent = 'Lyrics unavailable'; }
+  } finally { if (generation === lyricGeneration) $('#lyrics-loading').hidden = true; }
+}
+function updateLyricPosition() {
+  if (!lyricResult?.synced || state.view !== 'lyrics') return;
+  let index = -1;
+  for (let i = 0; i < lyricResult.lines.length; i++) { if (lyricResult.lines[i].time <= audio.currentTime) index = i; else break; }
+  if (index === activeLine) return;
+  const children = $('#lyrics-lines').children;
+  if (activeLine >= 0) { children[activeLine]?.classList.remove('active'); children[activeLine]?.removeAttribute('aria-current'); }
+  activeLine = index;
+  if (index >= 0) {
+    children[index]?.classList.add('active'); children[index]?.setAttribute('aria-current', 'true');
+    if (followLyrics) centerLyric(children[index]);
+  }
+}
+function centerLyric(line) {
+  if (!line) return;
+  const container = $('#lyrics-lines');
+  const top = container.scrollTop + line.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientHeight / 2 + line.clientHeight / 2;
+  container.scrollTo({ top, behavior: systemMotion.matches || $('#reduce-motion').checked ? 'instant' : 'smooth' });
 }
 async function advance(direction, automatic = false) {
   if (direction < 0 && audio.currentTime > 3) { audio.currentTime = 0; return; }
@@ -162,12 +267,30 @@ $('#search-form').addEventListener('submit', event => { event.preventDefault(); 
 $('#start-search').addEventListener('click', () => showView('search'));
 $('#import').addEventListener('click', safe(async () => { const tracks = await request('pickFiles'); if (!tracks.length) return; state.local = [...state.local.filter(item => !tracks.some(track => track.id === item.id)), ...tracks]; save('local', state.local); status(`Added ${tracks.length} local tracks.`); showView('local'); }));
 $('#play').addEventListener('click', safe(togglePlayback)); $('#previous').addEventListener('click', safe(() => advance(-1))); $('#next').addEventListener('click', safe(() => advance(1))); $('#now-like').addEventListener('click', () => toggleFavourite(current()));
+$('#favourite-filter').addEventListener('input', renderTracks);
+$('#dismiss-favourite').addEventListener('click', dismissFavouriteNotice);
+$('#undo-favourite').addEventListener('click', () => {
+  if (!undoFavourites || !save('favourites', undoFavourites)) return;
+  state.favourites = undoFavourites; updateLikes();
+  if (state.view === 'favourites') renderTracks();
+  dismissFavouriteNotice(); status('Favourite change undone.');
+});
+$('#show-lyrics').addEventListener('click', () => showView(state.view === 'lyrics' ? 'queue' : 'lyrics'));
+$('#follow-lyrics').addEventListener('click', () => {
+  followLyrics = !followLyrics; $('#follow-lyrics').setAttribute('aria-pressed', String(followLyrics));
+  if (followLyrics) centerLyric($('#lyrics-lines .active'));
+  updateLyricPosition();
+});
+$('#lyrics-lines').addEventListener('wheel', () => { followLyrics = false; $('#follow-lyrics').setAttribute('aria-pressed', 'false'); }, { passive: true });
+$('#lyrics-lines').addEventListener('touchstart', () => { followLyrics = false; $('#follow-lyrics').setAttribute('aria-pressed', 'false'); }, { passive: true });
+$('#lyrics-lines').addEventListener('keydown', event => { if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End'].includes(event.key)) { followLyrics = false; $('#follow-lyrics').setAttribute('aria-pressed', 'false'); } });
+$('#lyrics-search').addEventListener('submit', event => { event.preventDefault(); const track = current(); if (track) loadLyrics({ title: $('#lyrics-title').value.trim(), artist: $('#lyrics-artist').value.trim(), duration: Number.isFinite(audio.duration) ? audio.duration : track.duration, local: false }); });
 $('#shuffle').addEventListener('click', () => { state.shuffle = !state.shuffle; updatePlayer(); }); $('#repeat').addEventListener('click', () => { state.repeat = !state.repeat; updatePlayer(); }); $('#show-queue').addEventListener('click', () => showView('queue'));
 audio.volume = Number.isFinite(preferences?.volume) ? Math.min(1, Math.max(0, preferences.volume)) : .8;
 $('#volume').value = String(audio.volume);
 $('#volume').addEventListener('input', event => { audio.volume = Number(event.target.value); });
 $('#seek').addEventListener('input', event => { if (Number.isFinite(audio.duration)) audio.currentTime = Number(event.target.value); });
-audio.addEventListener('timeupdate', () => { $('#elapsed').textContent = time(audio.currentTime); $('#seek').value = String(audio.currentTime); });
+audio.addEventListener('timeupdate', () => { $('#elapsed').textContent = time(audio.currentTime); $('#seek').value = String(audio.currentTime); updateLyricPosition(); });
 audio.addEventListener('loadedmetadata', () => { const finite = Number.isFinite(audio.duration); $('#duration').textContent = time(audio.duration); $('#seek').max = finite ? String(audio.duration) : '100'; $('#seek').disabled = !finite; });
 audio.addEventListener('emptied', () => { $('#seek').disabled = true; $('#seek').value = '0'; $('#elapsed').textContent = '0:00'; $('#duration').textContent = '0:00'; });
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => { state.playing = !audio.paused && !audio.ended; updatePlayer(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused'; });
@@ -179,5 +302,19 @@ $('#settings-open').addEventListener('click', () => $('#settings').showModal());
 document.querySelectorAll('button[data-theme]').forEach(button => button.addEventListener('click', () => { theme = button.dataset.theme; applyTheme(); }));
 $('#appearance').addEventListener('change', event => { appearance = event.target.value; applyTheme(); }); $('#reduce-motion').addEventListener('change', () => { applyTheme(); if ($('#reduce-motion').checked) dismissIntro(); });
 $('#releases').addEventListener('click', safe(() => request('releases')));
+async function checkForUpdates(manual = false) {
+  $('#check-updates').disabled = true;
+  if (manual) $('#update-status').textContent = 'Checking for updates…';
+  try {
+    const update = await request('updates');
+    $('#update-status').textContent = update.available ? `Version ${update.version} is available. Updating is optional.` : 'You are using the latest published desktop preview.';
+    if (update.available) { $('#update-message').textContent = `Dhun ${update.version} is available. Update whenever you’re ready.`; $('#update-notice').hidden = false; }
+  } catch (error) { if (manual) $('#update-status').textContent = error.message; }
+  finally { $('#check-updates').disabled = false; }
+}
+$('#check-updates').addEventListener('click', () => checkForUpdates(true));
+$('#download-update').addEventListener('click', safe(() => request('downloadUpdate')));
+$('#update-later').addEventListener('click', () => { $('#update-notice').hidden = true; $('#page-title').focus(); });
 request('version').then(version => { $('#version').textContent = `DESKTOP PREVIEW · ${version}`; }).catch(() => {});
 updatePlayer();
+checkForUpdates();

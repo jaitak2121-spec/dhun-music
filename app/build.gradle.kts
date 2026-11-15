@@ -141,11 +141,11 @@ val listenTogetherServer: String = (
 /*
  * Direct/local builds keep these defaults. The manual Android workflow passes
  * appVersionCode and appVersionName as Gradle properties. Version name stays a
- * string, so values such as "1.8-beta2" or "DollBloom2026" are supported.
+ * string, so values such as "1.8-beta2" or "Dhun2026" are supported.
  */
 val configuredVersionCode = providers.gradleProperty("appVersionCode").orNull
 val appVersionCode = if (configuredVersionCode == null) {
-    22
+    23
 } else {
     val parsed = configuredVersionCode.toIntOrNull()
         ?: throw GradleException("appVersionCode must be a positive integer")
@@ -155,7 +155,7 @@ val appVersionCode = if (configuredVersionCode == null) {
     parsed
 }
 val configuredVersionName = providers.gradleProperty("appVersionName").orNull
-val appVersionName = configuredVersionName ?: "1.7"
+val appVersionName = configuredVersionName ?: "1.7.1"
 if (!Regex("[A-Za-z0-9][A-Za-z0-9 ._+-]{0,63}").matches(appVersionName)) {
     throw GradleException("appVersionName must be 1-64 letters/digits, spaces, dots, underscores, pluses, or hyphens")
 }

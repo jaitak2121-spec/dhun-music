@@ -43,9 +43,9 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - name: Build the debug app
         id: build
-        run: bash ./gradlew --no-daemon --max-workers=2 assembleDevDebug --stacktrace
+        run: bash ./gradlew --no-daemon --max-workers=2 assembleDevDebug -PappVersionCode="$((1000 + GITHUB_RUN_NUMBER))" -PappVersionName="1.7.1-preview.${GITHUB_RUN_NUMBER}" --stacktrace
       - name: Run Android unit tests
-        run: bash ./gradlew --no-daemon --max-workers=2 testDevDebugUnitTest --stacktrace
+        run: bash ./gradlew --no-daemon --max-workers=2 testDevDebugUnitTest -PappVersionCode="$((1000 + GITHUB_RUN_NUMBER))" -PappVersionName="1.7.1-preview.${GITHUB_RUN_NUMBER}" --stacktrace
       - name: Save the installable universal debug APK
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
@@ -90,6 +90,8 @@ jobs:
               --prerelease --title "Dhun preview ${GITHUB_RUN_NUMBER}" \
               --notes "Development APK for Android 8+ ARM phones. Source: ${GITHUB_SHA}. Uses Dhun's shared development signing key; not a production release."
           fi
-          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source:$source, run:$run, developmentSigning:true}' > apk/Android-build.json
-          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. This private repository requires GitHub access. Older versioned previews remain in Releases." || gh release view preview
-          gh release upload preview apk/Dhun.apk apk/Android-build.json --clobber
+          DIGEST="$(sha256sum apk/Dhun.apk | cut -d ' ' -f 1)"
+          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" --arg version "1.7.1-preview.${GITHUB_RUN_NUMBER}" --arg sha256 "$DIGEST" --argjson code "$((1000 + GITHUB_RUN_NUMBER))" '{source:$source, run:$run, versionName:$version, versionCode:$code, sha256:$sha256, developmentSigning:true, notes:"Optional update with Dhun improvements. Your library and settings stay on this device."}' > apk/Android-build.json
+          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. Installers and corresponding source are publicly available. Older versioned previews remain in Releases." || gh release view preview
+          gh release upload preview apk/Dhun.apk --clobber
+          gh release upload preview apk/Android-build.json --clobber

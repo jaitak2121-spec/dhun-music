@@ -6,6 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://i.ytimg.com; media-src dhun: https://*.googlevideo.com; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Discover · Dhun</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="library.css">
   <script type="module" src="app.mjs"></script>
 </head>
 <body>
@@ -19,7 +20,7 @@
         <button data-view="discover" aria-current="page"><i data-icon="discover"></i>Discover</button>
         <button data-view="search"><i data-icon="search"></i>Search</button>
         <p class="nav-label">YOUR LIBRARY</p>
-        <button data-view="favourites"><i data-icon="heart"></i>Favourites</button>
+        <button data-view="favourites"><i data-icon="heart"></i>Favourites <span id="favourites-count">0</span></button>
         <button data-view="recent"><i data-icon="history"></i>Recently played</button>
         <button data-view="local"><i data-icon="folder"></i>On this device</button>
         <button data-view="queue"><i data-icon="queue"></i>Play queue <span id="queue-count">0</span></button>
@@ -29,6 +30,7 @@
     <main>
       <header class="topbar"><span class="desktop-label">A LITTLE MORE YOU.</span><form id="search-form" role="search"><label class="sr-only" for="query">Search music</label><i data-icon="search"></i><input id="query" type="search" maxlength="160" placeholder="Songs, artists, a feeling…" required><button type="submit">Search</button></form></header>
       <div class="page">
+        <section id="update-notice" class="update-notice" aria-label="Optional update" hidden><p id="update-message" role="status"></p><button id="download-update" class="primary">Download update</button><button id="update-later" class="subtle">Later</button></section>
         <div class="page-heading"><div><p class="eyebrow" id="page-kicker">WELCOME TO YOUR SPACE</p><h1 id="page-title" tabindex="-1">Discover</h1></div><button id="import" class="subtle"><i data-icon="plus"></i>Add local music</button></div>
         <p id="status" role="status"></p><progress id="loading" aria-label="Searching music" hidden></progress>
         <section id="discovery">
@@ -42,16 +44,36 @@
           </ul>
           <div class="discovery-note"><i data-icon="music"></i><p>No algorithm to impress. Search for what moves you.<br><span>Your favourites and listening history stay on this device.</span></p></div>
         </section>
-        <section id="results" hidden><div id="empty" class="empty"><i data-icon="music"></i><h2>Your soundtrack starts here</h2><p>Search for music above, or add songs from your device.</p></div><ol id="tracks"></ol></section>
+        <section id="results" hidden><div id="library-tools" hidden><label for="favourite-filter">Find a favourite</label><input id="favourite-filter" type="search" placeholder="Filter by song or artist"></div><div id="empty" class="empty"><i data-icon="music"></i><h2 id="empty-title">Your soundtrack starts here</h2><p id="empty-description">Search for music above, or add songs from your device.</p></div><ol id="tracks"></ol></section>
+        <section id="lyrics-view" hidden aria-label="Lyrics">
+          <div class="lyrics-heading"><div><h2 id="lyrics-song">Choose a song to see its lyrics</h2><p id="lyrics-credit">Timed lyrics appear when available.</p></div><button id="follow-lyrics" class="subtle" aria-pressed="true">Follow song</button></div>
+          <p id="lyrics-message" role="status"></p><progress id="lyrics-loading" aria-label="Loading lyrics" hidden></progress>
+          <div id="lyrics-lines" role="region" tabindex="0" aria-label="Song lyrics"></div>
+          <details id="lyrics-search-details"><summary>Wrong lyrics or no match? Search by title and artist</summary><p>Online searches send the title and artist to LRCLIB. A local song first checks its matching .lrc file.</p><form id="lyrics-search"><div><label for="lyrics-title">Song title</label><input id="lyrics-title" maxlength="300" required></div><div><label for="lyrics-artist">Artist</label><input id="lyrics-artist" maxlength="200" required></div><button class="primary" type="submit">Find lyrics</button></form></details>
+        </section>
       </div>
     </main>
   </div>
   <footer class="player" aria-label="Music player">
-    <div class="now-playing"><div class="cover" id="now-art"><i data-icon="music"></i></div><div><strong id="now-title">Your next favourite awaits</strong><span id="now-artist">Choose a song to get started</span></div><button id="now-like" class="icon-button" aria-label="Add current track to favourites" aria-pressed="false" disabled><i data-icon="heart"></i></button></div>
+    <div class="now-playing"><div class="cover" id="now-art"><i data-icon="music"></i></div><div><strong id="now-title">Your next favourite awaits</strong><span id="now-artist">Choose a song to get started</span></div><button id="now-like" class="icon-button" aria-label="Favourite current track" aria-pressed="false" disabled><i data-icon="heart"></i></button></div>
     <div class="transport"><div class="transport-buttons"><button id="shuffle" class="icon-button" aria-label="Shuffle" aria-pressed="false"><i data-icon="shuffle"></i></button><button id="previous" class="icon-button" aria-label="Previous track" disabled><i data-icon="previous"></i></button><button id="play" class="play-button" aria-label="Play" disabled><i data-icon="play"></i></button><button id="next" class="icon-button" aria-label="Next track" disabled><i data-icon="next"></i></button><button id="repeat" class="icon-button" aria-label="Repeat queue" aria-pressed="false"><i data-icon="repeat"></i></button></div><div class="timeline"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Playback position" disabled><span id="duration">0:00</span></div></div>
-    <div class="volume"><button id="show-queue" class="icon-button" aria-label="Show play queue"><i data-icon="queue"></i></button><i data-icon="volume"></i><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></div>
+    <div class="volume"><button id="show-lyrics" class="icon-button" aria-label="Show lyrics" aria-pressed="false"><i data-icon="lyrics"></i></button><button id="show-queue" class="icon-button" aria-label="Show play queue"><i data-icon="queue"></i></button><i data-icon="volume"></i><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></div>
   </footer>
   <audio id="audio" preload="none"></audio>
-  <dialog id="settings" aria-labelledby="settings-title"><div class="dialog-heading"><h2 id="settings-title">Make it yours</h2><button id="settings-close" class="icon-button" aria-label="Close settings"><i data-icon="close"></i></button></div><p>Your music deserves a space that feels like you.</p><fieldset><legend>Colour palette</legend><div class="theme-options"><button data-theme="monochrome" aria-pressed="true">Monochrome</button><button data-theme="indigo" aria-pressed="false">Indigo</button><button data-theme="forest" aria-pressed="false">Forest</button></div></fieldset><div class="setting-row"><label for="appearance">Appearance</label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Follow system</option></select></div><label class="setting-row" for="reduce-motion">Reduce animation<input type="checkbox" id="reduce-motion"></label><div class="about"><strong>Dhun desktop preview</strong><p>Independent desktop player. Android features such as account sign-in, downloads, lyrics, and Automix are not included in this preview.</p><button id="releases" class="subtle">Downloads, updates &amp; source <i data-icon="arrow"></i></button><p>GPL-3.0 · Playback powered by yt-dlp.<br>Dhun Android is derived from DollBloom / BitChord.<br>Full licences and credits are included with the app.</p></div></dialog>
+  <div id="favourite-notice" class="toast" hidden><span id="favourite-message" role="status"></span><button id="undo-favourite">Undo</button><button id="dismiss-favourite" aria-label="Dismiss favourite notification">×</button></div>
+  <dialog id="settings" aria-labelledby="settings-title">
+    <div class="dialog-heading"><h2 id="settings-title">Make it yours</h2><button id="settings-close" class="icon-button" aria-label="Close settings"><i data-icon="close"></i></button></div>
+    <p>Your music deserves a space that feels like you.</p>
+    <fieldset><legend>Colour palette</legend><div class="theme-options"><button data-theme="monochrome" aria-pressed="true">Monochrome</button><button data-theme="indigo" aria-pressed="false">Indigo</button><button data-theme="forest" aria-pressed="false">Forest</button></div></fieldset>
+    <div class="setting-row"><label for="appearance">Appearance</label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Follow system</option></select></div>
+    <label class="setting-row" for="reduce-motion">Reduce animation<input type="checkbox" id="reduce-motion"></label>
+    <div class="about"><strong>Dhun desktop preview</strong>
+      <p>Your music. Your rhythm. Account sign-in, offline YouTube downloads, and Automix are not included in this desktop preview.</p>
+      <button id="check-updates" class="subtle">Check for updates</button><p id="update-status" role="status"></p>
+      <button id="releases" class="subtle">Downloads &amp; source <i data-icon="arrow"></i></button>
+      <p>Favourites and listening history stay on this device. Online lyrics searches send song details to LRCLIB.</p>
+      <p>GPL-3.0 · Playback powered by yt-dlp · Online lyrics by LRCLIB.<br>Full licences, source provenance and credits are included with the app under licenses/NOTICE.md.</p>
+    </div>
+  </dialog>
 </body>
 </html>

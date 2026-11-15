@@ -1,7 +1,7 @@
 {
   "name": "dhun-desktop",
   "productName": "Dhun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Your music. Your rhythm.",
   "author": "Dhun contributors",
   "license": "GPL-3.0-only",
@@ -24,7 +24,7 @@
     "appId": "io.github.jaitak2121spec.dhun.desktop",
     "asar": true,
     "directories": { "output": "dist", "buildResources": "resources" },
-    "files": ["main.mjs", "preload.cjs", "model.mjs", "renderer/**/*", "package.json"],
+    "files": ["main.mjs", "preload.cjs", "model.mjs", "lyrics.mjs", "updates.mjs", "renderer/**/*", "package.json"],
     "extraResources": [
       { "from": "resources/player", "to": "player" },
       { "from": "../LICENSE", "to": "licenses/Dhun-GPL-3.0.txt" },

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-export const RELEASES = 'https://github.com/jaitak2121-spec/dhun-music/releases/tag/desktop-preview';
+export const RELEASES = 'https://github.com/jaitak2121-spec/dhun-music/releases/tag/preview';
 export const validId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{11}$/.test(value);
 export function searchTerm(value) {
   if (typeof value !== 'string' || !value.trim() || value.length > 160) throw Error('Enter a search of 1–160 characters.');

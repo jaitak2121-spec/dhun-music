@@ -14,16 +14,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import okhttp3.Request
 import java.io.File
+import java.security.MessageDigest
 
 /**
- * DollBloom ships as a sideloaded APK off GitHub Releases rather than through
- * a store, so there's nothing to push an update notice on its own — this
- * polls the repo's "latest release" once per launch and compares its tag
- * against the running build.
+ * Dhun checks the published Android build manifest once per launch. Update
+ * notices are optional; dismissing them never blocks listening. Version codes
+ * identify preview builds, independent of rolling release tags or desktop versions.
  *
  * The update itself is also handled here: the release's `.apk` asset is
  * downloaded into the app's cache and handed to the system package installer,
@@ -38,12 +38,14 @@ object AppUpdateChecker {
         val apkUrl: String?,
         /** The release's own Markdown body, shown as this update's "what's new". */
         val notes: String?,
+        val sha256: String,
     )
 
     private const val CACHE_SUBDIR = "updates"
 
-    private const val LATEST_RELEASE_URL =
-        "https://api.github.com/repos/jaitak2121-spec/dhun-music/releases/latest"
+    private const val RELEASE_URL = "https://github.com/jaitak2121-spec/dhun-music/releases/tag/preview"
+    private const val DOWNLOAD_ROOT = "https://github.com/jaitak2121-spec/dhun-music/releases/download/preview"
+    private const val LATEST_RELEASE_URL = "$DOWNLOAD_ROOT/Android-build.json"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -67,19 +69,11 @@ object AppUpdateChecker {
 
     suspend fun check() = withContext(Dispatchers.IO) {
         runCatching {
-            val request = Request.Builder().url(LATEST_RELEASE_URL).build()
+            val request = Request.Builder().url(LATEST_RELEASE_URL).header("Cache-Control", "no-cache").build()
             val body = Http.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null else response.body?.string()
             } ?: return@runCatching
-            val release = json.parseToJsonElement(body) as? JsonObject ?: return@runCatching
-            val tag = release["tag_name"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
-            val url = release["html_url"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
-            val apkUrl = apkAssetUrl(release)
-            val notes = release["body"]?.jsonPrimitive?.contentOrNull
-            val latest = tag.removePrefix("v")
-            if (isNewer(latest, BuildConfig.VERSION_NAME)) {
-                _available.value = UpdateInfo(latest, url, apkUrl, notes)
-            }
+            _available.value = parseManifest(body, BuildConfig.VERSION_CODE)
         }
     }
 
@@ -93,22 +87,14 @@ object AppUpdateChecker {
         File(context.cacheDir, CACHE_SUBDIR).listFiles()?.forEach { it.delete() }
     }
 
-    /**
-     * The release usually carries exactly one `.apk`; take its direct download
-     * URL. A release without one (source-only draft, renamed asset) leaves
-     * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
-     * page as before.
-     */
-    private fun apkAssetUrl(release: JsonObject): String? = runCatching {
-        release["assets"]?.jsonArray
-            ?.mapNotNull { it as? JsonObject }
-            ?.firstOrNull { asset ->
-                asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true &&
-                    asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
-            }
-            ?.get("browser_download_url")
-            ?.jsonPrimitive
-            ?.contentOrNull
+    internal fun parseManifest(body: String, currentCode: Int): UpdateInfo? = runCatching {
+        if (body.length > 100_000) return@runCatching null
+        val metadata = json.parseToJsonElement(body) as? JsonObject ?: return@runCatching null
+        val code = metadata["versionCode"]?.jsonPrimitive?.intOrNull ?: return@runCatching null
+        val version = metadata["versionName"]?.jsonPrimitive?.contentOrNull ?: return@runCatching null
+        val digest = metadata["sha256"]?.jsonPrimitive?.contentOrNull?.lowercase() ?: return@runCatching null
+        if (code <= currentCode || !Regex("[A-Za-z0-9._+-]{1,64}").matches(version) || !Regex("[a-f0-9]{64}").matches(digest)) return@runCatching null
+        UpdateInfo(version, RELEASE_URL, "$DOWNLOAD_ROOT/Dhun.apk", metadata["notes"]?.jsonPrimitive?.contentOrNull, digest)
     }.getOrNull()
 
     /**
@@ -127,7 +113,8 @@ object AppUpdateChecker {
             val dir = File(context.cacheDir, CACHE_SUBDIR).apply { mkdirs() }
             // Drop anything left over from an earlier attempt.
             dir.listFiles()?.forEach { it.delete() }
-            val target = File(dir, "dollbloom-${info.version}.apk")
+            val target = File(dir, "Dhun-update.apk")
+            val digest = MessageDigest.getInstance("SHA-256")
 
             val request = Request.Builder().url(url).build()
             Http.client.newCall(request).execute().use { response ->
@@ -146,6 +133,8 @@ object AppUpdateChecker {
                             }
                             val read = input.read(buffer)
                             if (read == -1) break
+                            check(readTotal + read <= 200L * 1024 * 1024) { "Update download exceeds the allowed size" }
+                            digest.update(buffer, 0, read)
                             output.write(buffer, 0, read)
                             readTotal += read
                             total?.let {
@@ -155,6 +144,11 @@ object AppUpdateChecker {
                         }
                     }
                 }
+            }
+            val actualDigest = digest.digest().joinToString("") { "%02x".format(it) }
+            check(actualDigest == info.sha256) {
+                target.delete()
+                "Update verification failed. Please download again."
             }
             _download.value = DownloadState.Ready(target)
         }.onFailure { error ->
@@ -207,31 +201,4 @@ object AppUpdateChecker {
         )
     }
 
-    /** A version split into its numeric dotted parts and whether it carries a "-suffix" (e.g. "-beta2"). */
-    private data class ParsedVersion(val parts: List<Int>, val isPreRelease: Boolean)
-
-    private fun parseVersion(raw: String): ParsedVersion {
-        val dash = raw.indexOf('-')
-        val base = if (dash >= 0) raw.substring(0, dash) else raw
-        return ParsedVersion(base.split(".").map { it.toIntOrNull() ?: 0 }, dash >= 0)
-    }
-
-    /**
-     * Numeric, dot-separated comparison — "1.10" outranks "1.9" — with one
-     * extra rule: a "-betaN" build (see the debug build type's
-     * `versionNameSuffix` in app/build.gradle.kts) is treated as older than a
-     * plain release of the same numbers, since the beta by definition predates
-     * the tag it was testing toward. Without this, a beta and the release it
-     * matches compare equal and testers never get nudged onto the real build.
-     */
-    private fun isNewer(latest: String, current: String): Boolean {
-        val l = parseVersion(latest)
-        val c = parseVersion(current)
-        for (i in 0 until maxOf(l.parts.size, c.parts.size)) {
-            val a = l.parts.getOrElse(i) { 0 }
-            val b = c.parts.getOrElse(i) { 0 }
-            if (a != b) return a > b
-        }
-        return c.isPreRelease && !l.isPreRelease
-    }
 }

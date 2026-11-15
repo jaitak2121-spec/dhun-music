@@ -664,7 +664,7 @@ fun SignInBanner(onSignIn: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.sign_in_youtube_music),
+                text = stringResource(R.string.sign_in),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )

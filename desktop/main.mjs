@@ -8,6 +8,8 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validId, searchTerm, tracksFromSearch, RELEASES } from './model.mjs';
+import { getLyrics, parseLrc } from './lyrics.mjs';
+import { checkDesktopUpdate, installerURL } from './updates.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const player = path.join(app.isPackaged ? process.resourcesPath : path.join(root, 'resources'), 'player', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
@@ -51,7 +53,7 @@ function handle(name, action) {
 async function serve(request) {
   const url = new URL(request.url);
   if (url.hostname === 'app') {
-    const allowed = ['index.html', 'style.css', 'app.mjs', 'model.mjs', 'logo.svg'];
+    const allowed = ['index.html', 'style.css', 'library.css', 'app.mjs', 'model.mjs', 'logo.svg'];
     const name = url.pathname.slice(1);
     if (!allowed.includes(name)) return new Response('Not found', { status: 404 });
     const file = name === 'model.mjs' ? path.join(root, name) : path.join(root, 'renderer', name);
@@ -112,8 +114,24 @@ handle('files', async () => {
   await writeFile(localStore, JSON.stringify([...localFiles]), { mode: 0o600 });
   return tracks;
 });
+handle('lyrics', async track => {
+  if (track?.local) {
+    const audio = localFiles.get(track.id);
+    if (!audio) throw Error('Add this local song again before loading lyrics.');
+    const file = path.join(path.dirname(audio), `${path.basename(audio, path.extname(audio))}.lrc`);
+    const info = await stat(file).catch(() => null);
+    if (info?.size && info.size <= 1_000_000) {
+      const lines = parseLrc(await readFile(file, 'utf8'));
+      if (lines.some(line => line.text)) return { source: 'Local LRC', synced: true, instrumental: false, lines };
+    }
+    return null; // Network lookup is a separate, explicit search for local files.
+  }
+  return getLyrics(track);
+});
 handle('releases', () => shell.openExternal(RELEASES));
 handle('version', () => app.getVersion());
+handle('updates', () => checkDesktopUpdate(app.getVersion(), process.platform, process.arch));
+handle('downloadUpdate', () => shell.openExternal(installerURL(process.platform, process.arch)));
 Menu.setApplicationMenu(Menu.buildFromTemplate([
   ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
   { label: 'File', submenu: [{ role: 'close' }, ...(process.platform !== 'darwin' ? [{ role: 'quit' }] : [])] },
