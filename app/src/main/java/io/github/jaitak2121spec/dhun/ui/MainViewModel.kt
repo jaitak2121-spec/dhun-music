@@ -1529,6 +1529,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Refreshes the core feed without blanking the current Play page first. */
     private suspend fun refreshHome(identity: String?) = coroutineScope {
+        if (identity != listenerKey()) return@coroutineScope
         val generation = homeLoadGeneration.incrementAndGet()
         _homeLoadingMore.value = false
         _homePendingShelves.value = 0
