@@ -32,6 +32,7 @@ The Genius live-service test is opt-in because it depends on an external website
 - Independent light, dark and system appearance modes.
 - Approved earbud-and-waveform mark, rendered as a scalable Android icon.
 - Platform sans-serif typography and a Dhun home header.
+- Brief logo-and-ripple launch reveal, home-feed fades, animated play/pause icons and sliding settings selectors. New motion respects Reduce animation and the Android animator setting.
 - Theme choices persist across restarts and participate in settings backups.
 
 ## Development status

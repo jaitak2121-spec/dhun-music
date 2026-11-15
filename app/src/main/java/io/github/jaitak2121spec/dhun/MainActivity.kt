@@ -249,6 +249,7 @@ import io.github.jaitak2121spec.dhun.ui.replay.ReplayStories
 import io.github.jaitak2121spec.dhun.ui.replay.ReplayStoryPage
 import io.github.jaitak2121spec.dhun.ui.replay.rememberReplayState
 import io.github.jaitak2121spec.dhun.ui.theme.DhunTheme
+import io.github.jaitak2121spec.dhun.ui.components.DhunLaunchIntro
 import io.github.jaitak2121spec.dhun.ui.theme.rememberArtworkPalette
 import io.github.jaitak2121spec.dhun.ui.theme.SystemBarIcons
 import io.github.jaitak2121spec.dhun.ui.utils.guardSheetFromContentTouches
@@ -337,6 +338,9 @@ class MainActivity : AppCompatActivity() {
                         windowWidth = maxWidth,
                         windowHeight = maxHeight,
                         appBackdrop = appBackdrop,
+                    )
+                    DhunLaunchIntro(
+                        showOnLaunch = savedInstanceState == null && intent.action == Intent.ACTION_MAIN,
                     )
                 }
                 }

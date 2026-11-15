@@ -1,6 +1,9 @@
 package io.github.jaitak2121spec.dhun.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -69,6 +72,7 @@ import io.github.jaitak2121spec.dhun.data.settings.LibraryViewType
 import io.github.jaitak2121spec.dhun.ui.components.HERO_CARD_RATIO
 import io.github.jaitak2121spec.dhun.ui.components.MessageState
 import io.github.jaitak2121spec.dhun.ui.components.PAGE_GUTTER
+import io.github.jaitak2121spec.dhun.ui.components.dhunMotionEnabled
 import io.github.jaitak2121spec.dhun.ui.components.PullToRefresh
 import io.github.jaitak2121spec.dhun.ui.components.SHELF_CARD_WIDTH
 import io.github.jaitak2121spec.dhun.ui.components.SignInBanner
@@ -113,6 +117,7 @@ fun HomeScreen(
     recentlyPlayedLoading: Boolean = false,
 ) {
     val recentsViewType by AppSettings.homeRecentsViewType.collectAsStateWithLifecycle()
+    val motion = dhunMotionEnabled()
 
     PullToRefresh(
         refreshing = refreshing,
@@ -190,6 +195,7 @@ fun HomeScreen(
                         onItemLongPress = onItemLongPress,
                         firstIsHero = !recentlyPlayedLoading,
                         recentsViewType = recentsViewType,
+                        motion = motion,
                         onRecentsViewTypeToggle = {
                             AppSettings.setHomeRecentsViewType(
                                 if (recentsViewType == LibraryViewType.LIST) {
@@ -236,23 +242,32 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     onItemLongPress: ((ShelfItem) -> Unit)?,
     firstIsHero: Boolean = true,
     recentsViewType: LibraryViewType,
+    motion: Boolean,
     onRecentsViewTypeToggle: () -> Unit,
 ) {
     shelves.forEachIndexed { index, shelf ->
         item(key = shelf.title + index) {
             val openItem: (ShelfItem) -> Unit = { item -> onItemClick(item, shelf.title) }
-            if (index == 0 && shelf.title.equals(RECENTS_TITLE, ignoreCase = true)) {
-                RecentShelf(
-                    shelf = shelf,
-                    onItemClick = openItem,
-                    onItemLongPress = onItemLongPress,
-                    viewType = recentsViewType,
-                    onViewTypeToggle = onRecentsViewTypeToggle,
-                )
-            } else if (index == 0 && firstIsHero) {
-                HeroShelf(shelf = shelf, onItemClick = openItem, onItemLongPress = onItemLongPress)
-            } else {
-                Shelf(shelf = shelf, onItemClick = openItem, onItemLongPress = onItemLongPress)
+            Box(
+                if (motion) Modifier.animateItem(
+                    fadeInSpec = tween(280),
+                    fadeOutSpec = null,
+                    placementSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                ) else Modifier,
+            ) {
+                if (index == 0 && shelf.title.equals(RECENTS_TITLE, ignoreCase = true)) {
+                    RecentShelf(
+                        shelf = shelf,
+                        onItemClick = openItem,
+                        onItemLongPress = onItemLongPress,
+                        viewType = recentsViewType,
+                        onViewTypeToggle = onRecentsViewTypeToggle,
+                    )
+                } else if (index == 0 && firstIsHero) {
+                    HeroShelf(shelf = shelf, onItemClick = openItem, onItemLongPress = onItemLongPress)
+                } else {
+                    Shelf(shelf = shelf, onItemClick = openItem, onItemLongPress = onItemLongPress)
+                }
             }
         }
     }

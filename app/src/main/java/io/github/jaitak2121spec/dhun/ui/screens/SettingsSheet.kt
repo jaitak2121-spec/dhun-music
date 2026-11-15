@@ -9,10 +9,15 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -149,6 +154,7 @@ import io.github.jaitak2121spec.dhun.data.settings.AudioQuality
 import io.github.jaitak2121spec.dhun.data.settings.DownloadQuality
 import io.github.jaitak2121spec.dhun.data.settings.ThemeMode
 import io.github.jaitak2121spec.dhun.data.settings.ColorTheme
+import io.github.jaitak2121spec.dhun.ui.components.dhunMotionEnabled
 import io.github.jaitak2121spec.dhun.data.stats.Backup
 import io.github.jaitak2121spec.dhun.playback.AudioCache
 import io.github.jaitak2121spec.dhun.ui.player.fullBleedArtworkAvailable
@@ -2461,58 +2467,63 @@ internal fun SegmentedControl(
     enabled: Boolean = true,
 ) {
     val haptics = LocalHapticFeedback.current
-    Row(
+    if (options.isEmpty()) return
+    val motion = dhunMotionEnabled()
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.outline)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             // Enough of a margin for the track to read as a track. At 2dp the
             // selected pill sat all but flush against the container's own edge,
             // so the two rounded rectangles merged into one shape and the
             // control stopped looking like something with a position in it.
             .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        options.forEachIndexed { index, label ->
-            val chosen = index == selectedIndex
-            val pill by animateColorAsState(
-                targetValue = if (chosen) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    Color.Transparent
-                },
-                animationSpec = tween(160),
-                label = "segmentPill",
-            )
-            val labelColor by animateColorAsState(
-                targetValue = if (chosen) {
-                    MaterialTheme.colorScheme.onPrimary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                animationSpec = tween(160),
-                label = "segmentLabel",
-            )
+        val optionWidth = (maxWidth - 2.dp * (options.size - 1)) / options.size
+        val position by animateDpAsState(
+            targetValue = (optionWidth + 2.dp) * selectedIndex.coerceIn(options.indices),
+            animationSpec = tween(if (motion) 220 else 0, easing = FastOutSlowInEasing),
+            label = "dhunSettingSelection",
+        )
+        Box(Modifier.matchParentSize()) {
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(pill)
-                    .clickable(enabled = enabled) {
-                        if (!chosen) {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSelect(index)
-                        }
-                    }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = labelColor,
-                    maxLines = 1,
+                Modifier.offset(x = position).width(optionWidth).fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            options.forEachIndexed { index, label ->
+                val chosen = index == selectedIndex
+                val labelColor by animateColorAsState(
+                    targetValue = if (chosen) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    animationSpec = tween(if (motion) 160 else 0),
+                    label = "segmentLabel",
                 )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(enabled = enabled) {
+                            if (!chosen) {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onSelect(index)
+                            }
+                        }
+                        .padding(vertical = 9.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = labelColor,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

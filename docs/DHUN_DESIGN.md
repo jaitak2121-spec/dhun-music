@@ -18,6 +18,10 @@ Mono uses neutral grey surfaces and platform sans-serif typography. Indigo uses 
 
 The vector is a simplified hand-drawn implementation of the approved mark, not an automatic trace. The launcher supports standard masks and Android's monochrome themed-icon layer. The home header uses the same mark, tinted to the active foreground colour.
 
+## Motion
+
+Fresh launcher opens reveal the earbud logo with two subtle ripples, then fade into the app in 760 ms. Links, widget actions and restored activities skip the intro. Initialization and playback run independently underneath it. Home shelves fade in and settle into place; mini-player play/pause icons use short scale/fade transitions; settings selectors slide behind fixed labels. Reduce animation and Android's animator setting disable the new motion.
+
 ## Verification remaining
 
 Build and device verification require JDK 17 and Android SDK/NDK. Review launcher masks, home layout, theme persistence, large font sizes and all three palettes in light/dark modes on a device before release.
