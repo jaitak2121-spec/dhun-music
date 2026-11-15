@@ -12,6 +12,10 @@ A personal Android music experience. Your music. Your rhythm.
 - Unit tests: `./gradlew testDevDebugUnitTest`
 - Application ID and Kotlin namespace: `io.github.jaitak2121spec.dhun`.
 
+## Test builds
+
+The **Dhun Android Check** workflow builds the development APK and runs unit tests on pushes and pull requests to `main`. A manual run is available from Actions. Download `dhun-debug` from the run's artifacts to install the universal debug APK. Artifacts expire after three days. This workflow does not publish releases or use production signing keys.
+
 ## Appearance
 
 - Black and white by default, with optional Indigo and Forest palettes.

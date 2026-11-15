@@ -165,6 +165,7 @@ android {
     namespace = "io.github.jaitak2121spec.dhun"
     // InnerTubeX's AAR requires compiling against 37; targetSdk (runtime behaviour) stays 36.
     compileSdk = 37
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "io.github.jaitak2121spec.dhun"
