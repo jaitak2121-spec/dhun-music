@@ -27,6 +27,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -60,6 +61,26 @@ object YtMusicRepository {
     suspend fun home(): Result<HomeFeed> = call("home") {
         val home = Innertube.browse("FEmusic_home")
         HomeFeed(InnertubeParser.parseHome(home), InnertubeParser.continuationToken(home))
+    }
+
+    suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet()): Result<List<HomeShelf>> = call("discovery") {
+        val batches = coroutineScope {
+            taste.queries.map { query -> async {
+                withTimeoutOrNull(15_000L) {
+                    val songs = search(query, SearchFilter.SONGS).getOrNull().orEmpty()
+                        .filterIsInstance<SearchResult.Track>().map { it.song }
+                    val related = songs.firstOrNull()?.let { radio(it.videoId).getOrNull() }.orEmpty()
+                    // Radio adds discovery; catalogue results remain a useful fallback.
+                    (related + songs).distinctBy { it.videoId }.take(30)
+                }.orEmpty()
+            } }.awaitAll()
+        }
+        val songs = diverseDiscovery(batches, excluded)
+        if (songs.isEmpty()) emptyList() else listOf(HomeShelf(
+            title = "Picked for your taste",
+            subtitle = "Based on your chosen artists, genres and language",
+            items = songs.map { ShelfItem(it.title, it.artist, it.thumbnailUrl, it.videoId, null) },
+        ))
     }
 
     /** Recently played is rendered independently, at the top of the Play page. */

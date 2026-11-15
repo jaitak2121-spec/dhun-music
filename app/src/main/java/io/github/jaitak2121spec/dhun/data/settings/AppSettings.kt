@@ -396,6 +396,7 @@ object AppSettings {
     val playbackSpeed = MutableStateFlow(1.0f)
     val themeMode = MutableStateFlow(ThemeMode.DARK)
     val colorTheme = MutableStateFlow(ColorTheme.MONO)
+    val discoveryTaste = MutableStateFlow(io.github.jaitak2121spec.dhun.data.DiscoveryTaste())
 
     /** Keep playing similar music once the queue runs out. */
     val autoplay = MutableStateFlow(true)
@@ -867,6 +868,11 @@ object AppSettings {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "DARK")
         }.getOrDefault(ThemeMode.DARK)
         colorTheme.value = ColorTheme.fromPreference(prefs.getString(KEY_COLOR_THEME, null))
+        discoveryTaste.value = io.github.jaitak2121spec.dhun.data.DiscoveryTaste(
+            prefs.getString("discovery_language", "").orEmpty(),
+            prefs.getString("discovery_artists", "").orEmpty(),
+            prefs.getString("discovery_genres", "").orEmpty(),
+        )
         autoplay.value = prefs.getBoolean(KEY_AUTOPLAY, true)
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
@@ -1079,6 +1085,13 @@ object AppSettings {
     fun setAutoplay(value: Boolean) {
         autoplay.value = value
         prefs.edit().putBoolean(KEY_AUTOPLAY, value).apply()
+    }
+
+    fun setDiscoveryTaste(value: io.github.jaitak2121spec.dhun.data.DiscoveryTaste) {
+        val bounded = value.copy(language = value.language.trim().take(40), artists = value.artists.trim().take(160), genres = value.genres.trim().take(60))
+        prefs.edit().putString("discovery_language", bounded.language).putString("discovery_artists", bounded.artists)
+            .putString("discovery_genres", bounded.genres).apply()
+        discoveryTaste.value = bounded
     }
 
     fun setShuffleEnabled(value: Boolean) {

@@ -2716,6 +2716,7 @@ private fun DhunApp(
                         )
                     } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
                         TAB_HOME -> HomeScreen(
+                            onTasteChanged = viewModel::loadHome,
                             state = homeState,
                             listState = homeListState,
                             title = stringResource(R.string.listen_now),

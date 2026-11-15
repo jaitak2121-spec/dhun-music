@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { nextIndex } from './model.mjs';
+import { nextIndex,discoveryQueries,diverseTracks } from './model.mjs';
 const $ = selector => document.querySelector(selector);
 const icons = {
   discover: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -54,6 +54,62 @@ systemMotion.addEventListener('change', event => { if (event.matches) dismissInt
 function status(message = '') { $('#status').textContent = message; }
 async function request(method, ...args) { const result = await window.dhun[method](...args); if (!result.ok) throw Error(result.error); return result.data; }
 const safe = task => async (...args) => { try { await task(...args); } catch (error) { status(error.message || 'Something went wrong. Please try again.'); } };
+let discoveryTaste=read('discovery-taste',{language:'',artists:'',genres:''});
+try{discoveryQueries(discoveryTaste);}catch{discoveryTaste={language:'',artists:'',genres:''};}
+let discoveryResults=[],discoveryGeneration=0;
+let hiddenSuggestions=read('hidden-suggestions',[]);
+if(!Array.isArray(hiddenSuggestions))hiddenSuggestions=[];
+hiddenSuggestions=hiddenSuggestions.filter(id=>typeof id==='string'&&/^[A-Za-z0-9_-]{11}$/.test(id)).slice(-500);
+function renderDiscovery(){
+  const list=$('#discovery-tracks');list.replaceChildren();
+  const tracks=diverseTracks([discoveryResults],hiddenSuggestions);
+  for(const [index,track] of tracks.entries()){
+    const row=node('li','track');const play=node('button','track-play');play.setAttribute('aria-label',`Play recommendation ${track.title}`);
+    const copy=node('span','track-copy');copy.append(node('strong','',track.title),node('span','',track.artist));play.append(artwork(track),copy);
+    play.addEventListener('click',safe(async()=>{state.queue=[...tracks];save('queue',state.queue);await playAt(index);}));
+    const heart=iconButton('heart',`Favourite ${track.title}`,()=>toggleFavourite(track),isFavourite(track));heart.dataset.likeId=track.id;
+    const dismiss=iconButton('minus',`Not interested in ${track.title}`,()=>{
+      const next=[...hiddenSuggestions.filter(id=>id!==track.id),track.id].slice(-500);
+      if(!save('hidden-suggestions',next))return;
+      hiddenSuggestions=next;renderDiscovery();
+      $('#discovery-status').textContent='Song hidden on this device. Refresh for other suggestions, or reset hidden songs in your music taste settings.';
+    });
+    row.append(play,node('span','track-time',track.duration?time(track.duration):'—'),heart,dismiss);list.append(row);
+  }
+}
+async function loadDiscovery(){
+  const generation=++discoveryGeneration,configured=discoveryQueries(discoveryTaste).length>0;
+  $('#discovery-refresh').hidden=!configured;$('#discovery-edit').textContent=configured?'Fine-tune your music taste':'Choose your music taste';
+  discoveryResults=[];renderDiscovery();
+  $('#discovery-loading').hidden=!configured;
+  $('#discovery-refresh').disabled=configured;
+  if(!configured){$('#discovery-status').textContent='Choose artists, genres and a language to discover music you want to hear.';return;}
+  $('#discovery-status').textContent='Finding music based on your choices…';
+  try{
+    const tracks=await request('recommendations',discoveryTaste);
+    if(generation!==discoveryGeneration)return;
+    discoveryResults=diverseTracks([tracks],hiddenSuggestions);renderDiscovery();
+    $('#discovery-status').textContent=discoveryResults.length?'Based on your chosen artists, genres and language. Hide a suggestion with the minus button.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
+  }catch(error){if(generation===discoveryGeneration)$('#discovery-status').textContent=`Recommendations unavailable: ${error.message} Your music library is unchanged.`;}
+  finally{if(generation===discoveryGeneration){$('#discovery-loading').hidden=true;$('#discovery-refresh').disabled=false;}}
+}
+$('#discovery-edit').addEventListener('click',()=>{
+  for(const key of ['language','artists','genres'])$(`#discovery-${key}`).value=discoveryTaste[key];
+  $('#discovery-dialog').showModal();
+});
+$('#discovery-cancel').addEventListener('click',()=>$('#discovery-dialog').close());
+$('#discovery-form').addEventListener('submit',event=>{
+  event.preventDefault();if(event.isComposing)return;
+  const data=new FormData(event.currentTarget),taste=Object.fromEntries(['language','artists','genres'].map(key=>[key,String(data.get(key)||'').trim()]));
+  if(!save('discovery-taste',taste))return;
+  discoveryTaste=taste;$('#discovery-dialog').close();loadDiscovery();
+});
+$('#discovery-reset').addEventListener('click',()=>{
+  const empty={language:'',artists:'',genres:''};
+  if(!save('discovery-taste',empty)||!save('hidden-suggestions',[]))return;
+  discoveryTaste=empty;hiddenSuggestions=[];$('#discovery-dialog').close();loadDiscovery();
+});
+$('#discovery-refresh').addEventListener('click',loadDiscovery);
 function time(value) { if (!Number.isFinite(value) || value < 0) return '0:00'; return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
 function current() { return state.queue[state.index]; }
 function isFavourite(track) { return state.favourites.some(item => item.id === track?.id); }
@@ -360,3 +416,4 @@ $('#update-later').addEventListener('click', () => { $('#update-notice').hidden 
 request('version').then(version => { $('#version').textContent = `DESKTOP PREVIEW · ${version}`; }).catch(() => {});
 updatePlayer();
 checkForUpdates();
+loadDiscovery();

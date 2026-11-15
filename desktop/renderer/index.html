@@ -36,6 +36,7 @@
         <section id="discovery">
           <div class="hero"><div class="hero-copy"><p class="eyebrow">TUNE INTO YOURSELF</p><h2>Find your<br><em>kind of rhythm.</em></h2><p>A soundtrack for wherever life takes you.<br>Start with a mood. Make it your own.</p><button id="start-search" class="primary">Find your next favourite <i data-icon="arrow"></i></button></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><img src="logo.svg" alt=""><span>THE WORLD CAN WAIT.</span></div></div>
           <div class="section-heading"><h2>Made for your moment</h2><span>Pick a mood. Press play.</span></div>
+          <section aria-labelledby="discovery-picks-title"><div class="section-heading"><h2 id="discovery-picks-title">Picked for your taste</h2><button id="discovery-edit" class="subtle">Choose your music taste</button></div><p id="discovery-status" role="status">Choose artists, genres and a language to discover music you want to hear.</p><progress id="discovery-loading" aria-label="Finding recommendations" hidden></progress><button id="discovery-refresh" class="subtle" hidden>Refresh recommendations</button><ol id="discovery-tracks" aria-label="Recommended songs"></ol></section>
           <ul class="moods">
             <li><button class="mood focus" data-query="instrumental focus ambient"><span class="mood-art" aria-hidden="true">◎</span><span class="eyebrow">TUNE OUT THE NOISE</span><strong>Deep focus</strong><span>Space to think.</span><i data-icon="arrow"></i></button></li>
             <li><button class="mood unwind" data-query="chill mellow evening music"><span class="mood-art" aria-hidden="true">☽</span><span class="eyebrow">TAKE A BREATH</span><strong>Slow down</strong><span>Less rush. More you.</span><i data-icon="arrow"></i></button></li>
@@ -75,6 +76,16 @@
       <p>Favourites stay on this device unless you choose to upload a cloud backup. Listening history stays local. Online lyrics searches send song details to LRCLIB.</p>
       <p>GPL-3.0 · Playback powered by yt-dlp · Online lyrics by LRCLIB.<br>Full licences, source provenance and credits are included with the app under licenses/NOTICE.md.</p>
     </div>
+  </dialog>
+  <dialog id="discovery-dialog" aria-labelledby="discovery-dialog-title">
+    <h2 id="discovery-dialog-title">Find your kind of music</h2><p>Choose what you want to hear. Any field can be left blank. These choices guide searches; they are not strict language filters.</p>
+    <form id="discovery-form" action="#" method="dialog" aria-labelledby="discovery-dialog-title">
+      <label for="discovery-language">Music language</label><input id="discovery-language" name="language" maxlength="40" placeholder="English, Hindi, Punjabi…" autofocus>
+      <label for="discovery-artists">Up to 3 artists, separated by commas</label><input id="discovery-artists" name="artists" maxlength="160" placeholder="Your favourite artists">
+      <label for="discovery-genres">Genres or a mood</label><input id="discovery-genres" name="genres" maxlength="60" placeholder="Indie, acoustic, electronic…">
+      <p>Your preferences and dismissed suggestions stay on this device. Discovery searches go to the music source, and are not uploaded to Dhun Cloud.</p>
+      <button class="primary" type="submit">Save and refresh</button><button class="subtle" id="discovery-reset" type="button">Reset preferences and hidden songs</button><button class="subtle" id="discovery-cancel" type="button" command="close" commandfor="discovery-dialog">Cancel</button>
+    </form>
   </dialog>
 </body>
 </html>

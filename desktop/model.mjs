@@ -19,3 +19,26 @@ export function nextIndex(index, length, direction, repeat, shuffle, random = Ma
   const next = index + direction;
   return next >= 0 && next < length ? next : repeat ? (next + length) % length : -1;
 }
+
+export function discoveryQueries(taste) {
+  if (!taste || typeof taste !== 'object' || ['language','artists','genres'].some(key => typeof taste[key] !== 'string') || taste.language.length > 40 || taste.artists.length > 160 || taste.genres.length > 60) throw Error('Enter a language, up to three artists, and genres within the displayed limits.');
+  const names=taste.artists.split(',').map(name=>name.trim().slice(0,50)).filter(Boolean)
+    .filter((name,index,all)=>all.findIndex(other=>other.toLocaleLowerCase()===name.toLocaleLowerCase())===index).slice(0,3);
+  const context=[taste.language.trim(),taste.genres.trim()].filter(Boolean);
+  return (names.length?names:['']).map(artist=>[artist,...context].filter(Boolean).join(' ')).filter(Boolean).map(query=>`${query.slice(0,150)} songs`);
+}
+
+export function diverseTracks(batches, excluded = [], limit = 12) {
+  if(limit<=0)return[];
+  const ids=new Set(excluded),recordings=new Set(),artists=new Map(),result=[];
+  for(let i=0;i<Math.max(0,...batches.map(batch=>batch.length));i++)for(const batch of batches){
+    const track=batch[i];if(!track||track.local||!validId(track.id)||typeof track.title!=='string'||typeof track.artist!=='string')continue;
+    const artist=track.artist.toLocaleLowerCase().replace(/\s*-\s*topic$|vevo$/gi,'').trim();
+    const title=track.title.toLocaleLowerCase().replace(/\([^)]*(?:official|lyrics?|audio|video)[^)]*\)|\[[^\]]*(?:official|lyrics?|audio|video)[^\]]*\]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    const recording=`${artist}:${title}`;
+    if(ids.has(track.id)||recordings.has(recording)||(artists.get(artist)||0)>=3)continue;
+    ids.add(track.id);recordings.add(recording);artists.set(artist,(artists.get(artist)||0)+1);result.push(track);
+    if(result.length>=limit)return result;
+  }
+  return result;
+}

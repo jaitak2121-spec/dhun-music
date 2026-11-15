@@ -32,6 +32,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
@@ -115,9 +119,13 @@ fun HomeScreen(
     onLoadMore: (() -> Unit)? = null,
     loadingMore: Boolean = false,
     recentlyPlayedLoading: Boolean = false,
+    onTasteChanged: () -> Unit = {},
 ) {
     val recentsViewType by AppSettings.homeRecentsViewType.collectAsStateWithLifecycle()
     val motion = dhunMotionEnabled()
+    val taste by AppSettings.discoveryTaste.collectAsStateWithLifecycle()
+    var showTaste by remember { mutableStateOf(false) }
+    if (showTaste) DiscoveryTasteDialog(onDismiss = { showTaste = false }, onSaved = onTasteChanged)
 
     PullToRefresh(
         refreshing = refreshing,
@@ -138,7 +146,12 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
                 )
             }
-            if (!signedIn) {
+            item {
+                TextButton(onClick = { showTaste = true }, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) {
+                    Text(if (taste.configured) "Fine-tune your music taste" else "Personalise your recommendations")
+                }
+            }
+            if (!signedIn && !taste.configured) {
                 item { GuestDiscovery(onDiscover) }
             }
             if (!signedIn && onSignIn != null) {
@@ -146,7 +159,7 @@ fun HomeScreen(
                     SignInBanner(onSignIn = onSignIn, modifier = Modifier.padding(bottom = 8.dp))
                 }
             }
-            if (signedIn) when (state) {
+            if (signedIn || taste.configured) when (state) {
                 is UiState.Loading -> {
                     if (recentlyPlayedLoading) {
                         recentlyPlayedSkeleton(listLayout = recentsViewType == LibraryViewType.LIST)
@@ -162,6 +175,9 @@ fun HomeScreen(
                     MessageState(state.message, actionLabel = stringResource(R.string.retry), onAction = onRetry)
                 }
                 is UiState.Success -> {
+                    if (state.data.isEmpty()) item {
+                        MessageState("No matching music is available right now. Try another artist or genre.", actionLabel = "Change preferences", onAction = { showTaste = true })
+                    }
                     if (recentlyPlayedLoading) {
                         recentlyPlayedSkeleton(listLayout = recentsViewType == LibraryViewType.LIST)
                     }

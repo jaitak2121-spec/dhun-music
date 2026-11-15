@@ -53,6 +53,7 @@ The Genius live-service test is opt-in because it depends on an external website
 - Theme choices persist across restarts and participate in settings backups.
 - Guest discovery uses native mood cards with music searches, rather than generic regional video charts. Sign in for account-based recommendations; regional music remains available in Search and Explore.
 - Desktop favourites have filled hearts, saved counts, filtering and undo, with state shared across the player and song lists and saved on this device.
+- Home discovery can be tuned with music language, up to three artists, and genres or mood. Android builds a taste-based shelf from music search and related-song radio, including for guests; signed-in feeds keep Recents and explicit taste ahead of generic supplements. Duplicate cards are removed. Discovery interleaves seeds, caps each artist's share, and excludes known Android dislikes. Desktop provides taste-based search discovery and a local “Not interested” control. Preferences guide results rather than guaranteeing a strict language filter; source availability still applies. Preferences and hidden suggestions remain on the device; discovery requests go to the music source and are not uploaded to Dhun Cloud.
 - Desktop lyrics use LRCLIB, with line highlighting, click-to-seek, plain-text fallback and manual title/artist matching. Local songs can use a matching `.lrc` file. Availability depends on the recording and source; lyrics are not guaranteed for every song.
 
 ## Development status

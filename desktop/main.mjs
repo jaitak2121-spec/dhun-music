@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { validId, searchTerm, tracksFromSearch, RELEASES } from './model.mjs';
+import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks, RELEASES } from './model.mjs';
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
 import { cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
@@ -19,13 +19,14 @@ const bufferedFiles = new Map();
 const children = new Set();
 let window;
 let searching;
+let discoveryGeneration=0;
 protocol.registerSchemesAsPrivileged([{ scheme: 'dhun', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 app.setName('Dhun');
 if (process.env.DHUN_SMOKE === '1') app.setPath('userData', path.join(app.getPath('temp'), `dhun-smoke-${process.pid}`));
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { window?.show(); window?.focus(); });
 
-function extract(args, isSearch = false) {
+function extract(args, isSearch = false, timeout) {
   if (isSearch) searching?.kill();
   if (children.size >= 4) throw Error('Please wait for the current request to finish.');
   return new Promise((resolve, reject) => {
@@ -33,7 +34,7 @@ function extract(args, isSearch = false) {
       '--ignore-config', '--no-playlist', '--no-warnings', '--no-progress',
       '--socket-timeout', '15', '--retries', '1', '--no-cache-dir',
       '--js-runtimes', `node:${process.execPath}`, ...args,
-    ], { timeout: isSearch ? 60000 : 120000, maxBuffer: 4 * 1024 * 1024, windowsHide: true,
+    ], { timeout: timeout ?? (isSearch ? 60000 : 120000), maxBuffer: 4 * 1024 * 1024, windowsHide: true,
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }, (error, stdout) => {
       children.delete(child);
       if (searching === child) searching = null;
@@ -102,6 +103,18 @@ handle('cloudManage',cloudManage);
 session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
 session.defaultSession.setPermissionCheckHandler(() => false);
 handle('search', async value => tracksFromSearch(JSON.parse(await extract(['--flat-playlist', '--dump-single-json', '--', `ytsearch18:${searchTerm(value)} music`], true))));
+handle('recommendations', async taste => {
+  const queries=discoveryQueries(taste),generation=++discoveryGeneration,batches=[];
+  let failure;
+  for(const query of queries){
+    if(generation!==discoveryGeneration)return[];
+    try{batches.push(tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--dump-single-json','--',`ytsearch12:${query}`],false,20000))));}
+    catch(error){failure=error;}
+  }
+  if(generation!==discoveryGeneration)return[];
+  if(!batches.length&&failure)throw failure;
+  return diverseTracks(batches);
+});
 handle('stream', async id => {
   if (!validId(id)) throw Error('Invalid track. Search for it again.');
   const key = `stream-${id}`;
