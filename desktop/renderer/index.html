@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="monochrome">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://i.ytimg.com; media-src dhun: https://*.googlevideo.com; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Discover · Dhun</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#page-title">Skip to music</a>
+  <div id="intro" aria-hidden="true"><div class="intro-core"><img src="logo.svg" alt=""><svg viewBox="0 0 300 100"><path d="M0 50H75L95 35 115 75 140 10 165 90 190 28 210 62 228 50H300"/></svg><strong>dhun</strong><span>Your music. Your rhythm.</span></div></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><img src="logo.svg" alt=""><span>dhun</span></div>
+      <p class="eyebrow">YOUR SOUND, YOUR SPACE</p>
+      <nav aria-label="Primary">
+        <button data-view="discover" aria-current="page"><i data-icon="discover"></i>Discover</button>
+        <button data-view="search"><i data-icon="search"></i>Search</button>
+        <p class="nav-label">YOUR LIBRARY</p>
+        <button data-view="favourites"><i data-icon="heart"></i>Favourites</button>
+        <button data-view="recent"><i data-icon="history"></i>Recently played</button>
+        <button data-view="local"><i data-icon="folder"></i>On this device</button>
+        <button data-view="queue"><i data-icon="queue"></i>Play queue <span id="queue-count">0</span></button>
+      </nav>
+      <div class="sidebar-bottom"><button id="settings-open"><i data-icon="settings"></i>Make it yours</button><p id="version">Dhun desktop preview</p></div>
+    </aside>
+    <main>
+      <header class="topbar"><span class="desktop-label">A LITTLE MORE YOU.</span><form id="search-form" role="search"><label class="sr-only" for="query">Search music</label><i data-icon="search"></i><input id="query" type="search" maxlength="160" placeholder="Songs, artists, a feeling…" required><button type="submit">Search</button></form></header>
+      <div class="page">
+        <div class="page-heading"><div><p class="eyebrow" id="page-kicker">WELCOME TO YOUR SPACE</p><h1 id="page-title" tabindex="-1">Discover</h1></div><button id="import" class="subtle"><i data-icon="plus"></i>Add local music</button></div>
+        <p id="status" role="status"></p><progress id="loading" aria-label="Searching music" hidden></progress>
+        <section id="discovery">
+          <div class="hero"><div class="hero-copy"><p class="eyebrow">TUNE INTO YOURSELF</p><h2>Find your<br><em>kind of rhythm.</em></h2><p>A soundtrack for wherever life takes you.<br>Start with a mood. Make it your own.</p><button id="start-search" class="primary">Find your next favourite <i data-icon="arrow"></i></button></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><img src="logo.svg" alt=""><span>THE WORLD CAN WAIT.</span></div></div>
+          <div class="section-heading"><h2>Made for your moment</h2><span>Pick a mood. Press play.</span></div>
+          <ul class="moods">
+            <li><button class="mood focus" data-query="instrumental focus ambient"><span class="mood-art" aria-hidden="true">◎</span><span class="eyebrow">TUNE OUT THE NOISE</span><strong>Deep focus</strong><span>Space to think.</span><i data-icon="arrow"></i></button></li>
+            <li><button class="mood unwind" data-query="chill mellow evening music"><span class="mood-art" aria-hidden="true">☽</span><span class="eyebrow">TAKE A BREATH</span><strong>Slow down</strong><span>Less rush. More you.</span><i data-icon="arrow"></i></button></li>
+            <li><button class="mood energy" data-query="upbeat workout electronic music"><span class="mood-art" aria-hidden="true">ϟ</span><span class="eyebrow">TURN IT ALL UP</span><strong>Find your energy</strong><span>A little louder.</span><i data-icon="arrow"></i></button></li>
+            <li><button class="mood acoustic" data-query="acoustic indie sessions"><span class="mood-art" aria-hidden="true">≋</span><span class="eyebrow">BACK TO THE FEELING</span><strong>Keep it acoustic</strong><span>Stripped back. All soul.</span><i data-icon="arrow"></i></button></li>
+          </ul>
+          <div class="discovery-note"><i data-icon="music"></i><p>No algorithm to impress. Search for what moves you.<br><span>Your favourites and listening history stay on this device.</span></p></div>
+        </section>
+        <section id="results" hidden><div id="empty" class="empty"><i data-icon="music"></i><h2>Your soundtrack starts here</h2><p>Search for music above, or add songs from your device.</p></div><ol id="tracks"></ol></section>
+      </div>
+    </main>
+  </div>
+  <footer class="player" aria-label="Music player">
+    <div class="now-playing"><div class="cover" id="now-art"><i data-icon="music"></i></div><div><strong id="now-title">Your next favourite awaits</strong><span id="now-artist">Choose a song to get started</span></div><button id="now-like" class="icon-button" aria-label="Add current track to favourites" aria-pressed="false" disabled><i data-icon="heart"></i></button></div>
+    <div class="transport"><div class="transport-buttons"><button id="shuffle" class="icon-button" aria-label="Shuffle" aria-pressed="false"><i data-icon="shuffle"></i></button><button id="previous" class="icon-button" aria-label="Previous track" disabled><i data-icon="previous"></i></button><button id="play" class="play-button" aria-label="Play" disabled><i data-icon="play"></i></button><button id="next" class="icon-button" aria-label="Next track" disabled><i data-icon="next"></i></button><button id="repeat" class="icon-button" aria-label="Repeat queue" aria-pressed="false"><i data-icon="repeat"></i></button></div><div class="timeline"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Playback position" disabled><span id="duration">0:00</span></div></div>
+    <div class="volume"><button id="show-queue" class="icon-button" aria-label="Show play queue"><i data-icon="queue"></i></button><i data-icon="volume"></i><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></div>
+  </footer>
+  <audio id="audio" preload="none"></audio>
+  <dialog id="settings" aria-labelledby="settings-title"><div class="dialog-heading"><h2 id="settings-title">Make it yours</h2><button id="settings-close" class="icon-button" aria-label="Close settings"><i data-icon="close"></i></button></div><p>Your music deserves a space that feels like you.</p><fieldset><legend>Colour palette</legend><div class="theme-options"><button data-theme="monochrome" aria-pressed="true">Monochrome</button><button data-theme="indigo" aria-pressed="false">Indigo</button><button data-theme="forest" aria-pressed="false">Forest</button></div></fieldset><div class="setting-row"><label for="appearance">Appearance</label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Follow system</option></select></div><label class="setting-row" for="reduce-motion">Reduce animation<input type="checkbox" id="reduce-motion"></label><div class="about"><strong>Dhun desktop preview</strong><p>Independent desktop player. Android features such as account sign-in, downloads, lyrics, and Automix are not included in this preview.</p><button id="releases" class="subtle">Downloads, updates &amp; source <i data-icon="arrow"></i></button><p>GPL-3.0 · Playback powered by yt-dlp.<br>Dhun Android is derived from DollBloom / BitChord.<br>Full licences and credits are included with the app.</p></div></dialog>
+</body>
+</html>

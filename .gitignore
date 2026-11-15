@@ -48,3 +48,10 @@ __pycache__/
 
 # AI agent configuration
 AGENTS.md
+# Desktop generated outputs and dependencies
+desktop/node_modules/
+desktop/dist/
+desktop/resources/player/
+desktop/resources/yt-dlp-LICENSE
+desktop/resources/THIRD_PARTY_LICENSES.txt
+desktop/smoke-desktop.png

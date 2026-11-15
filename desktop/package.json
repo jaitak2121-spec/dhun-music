@@ -1,0 +1,57 @@
+{
+  "name": "dhun-desktop",
+  "productName": "Dhun",
+  "version": "0.1.0",
+  "description": "Your music. Your rhythm.",
+  "author": "Dhun contributors",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.mjs",
+    "prepare:player": "node scripts/prepare-player.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "dist": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0",
+    "@playwright/test": "1.61.1"
+  },
+  "build": {
+    "appId": "io.github.jaitak2121spec.dhun.desktop",
+    "asar": true,
+    "directories": { "output": "dist", "buildResources": "resources" },
+    "files": ["main.mjs", "preload.cjs", "model.mjs", "renderer/**/*", "package.json"],
+    "extraResources": [
+      { "from": "resources/player", "to": "player" },
+      { "from": "../LICENSE", "to": "licenses/Dhun-GPL-3.0.txt" },
+      { "from": "../NOTICE.md", "to": "licenses/NOTICE.md" },
+      { "from": "resources/THIRD_PARTY_LICENSES.txt", "to": "licenses/yt-dlp-THIRD_PARTY_LICENSES.txt" },
+      { "from": "resources/yt-dlp-LICENSE", "to": "licenses/yt-dlp-LICENSE" }
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": ["dmg"],
+      "icon": "resources/icon.icns",
+      "identity": null,
+      "minimumSystemVersion": "12.0",
+      "artifactName": "Dhun-Mac-${arch}.dmg"
+    },
+    "dmg": { "title": "Dhun", "window": { "width": 540, "height": 380 } },
+    "win": {
+      "target": ["nsis"],
+      "icon": "resources/icon.ico",
+      "artifactName": "Dhun-Windows-x64.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Dhun",
+      "uninstallDisplayName": "Dhun"
+    }
+  }
+}

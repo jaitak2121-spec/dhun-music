@@ -90,3 +90,6 @@ jobs:
               --prerelease --title "Dhun preview ${GITHUB_RUN_NUMBER}" \
               --notes "Development APK for Android 8+ ARM phones. Source: ${GITHUB_SHA}. Uses Dhun's shared development signing key; not a production release."
           fi
+          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source:$source, run:$run, developmentSigning:true}' > apk/Android-build.json
+          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. This private repository requires GitHub access. Older versioned previews remain in Releases." || gh release view preview
+          gh release upload preview apk/Dhun.apk apk/Android-build.json --clobber

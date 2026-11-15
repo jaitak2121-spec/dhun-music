@@ -1,0 +1,112 @@
+name: Dhun Desktop
+
+on:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop-check.yml', 'assets/brand/**', 'LICENSE', 'NOTICE.md']
+  pull_request:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop-check.yml', 'assets/brand/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: dhun-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows
+            args: --win --x64
+          - os: macos-15
+            target: mac-arm64
+            args: --mac --arm64
+          - os: macos-15-intel
+            target: mac-x64
+            args: --mac --x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run prepare:player
+      - run: npm test
+      - name: Test the desktop interface and real audio playback
+        run: npm run smoke
+      - name: Package native installers
+        run: npm run dist -- ${{ matrix.args }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Test the packaged Mac application
+        if: runner.os == 'macOS'
+        run: npm run smoke
+        env:
+          DHUN_SMOKE_APP: dist/${{ matrix.target == 'mac-arm64' && 'mac-arm64' || 'mac' }}/Dhun.app/Contents/MacOS/Dhun
+      - name: Install and test the Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installPath = Join-Path $env:RUNNER_TEMP 'Dhun-installed'
+          $installer = (Resolve-Path 'dist/Dhun-Windows-x64.exe').Path
+          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installPath" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer exited $($process.ExitCode)" }
+          $env:DHUN_SMOKE_APP = Join-Path $installPath 'Dhun.exe'
+          npm run smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Save native installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: dhun-${{ matrix.target }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+          if-no-files-found: error
+          retention-days: 7
+      - name: Save desktop screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-${{ matrix.target }}
+          path: desktop/smoke-desktop.png
+          if-no-files-found: ignore
+          retention-days: 7
+  publish:
+    needs: desktop
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dhun-*
+          merge-multiple: true
+          path: installers
+      - name: Publish downloads without artifact expiry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          jq -n --arg source "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" '{source:$source, run:$run, unsigned:true}' > installers/Desktop-build.json
+          (cd installers && sha256sum *.exe *.dmg > Desktop-SHA256SUMS.txt)
+          TAG="desktop-${GITHUB_RUN_NUMBER}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "$GITHUB_SHA" --prerelease --title "Dhun desktop preview ${GITHUB_RUN_NUMBER}" --notes "Windows x64 and macOS Apple Silicon / Intel installers. Unsigned development previews. Source: ${GITHUB_SHA}. GUI and local-audio smoke tests passed on all three runners; live streaming remains dependent on YouTube."
+          gh release upload "$TAG" installers/* --clobber
+          gh release view preview >/dev/null 2>&1 || gh release create preview --target "$GITHUB_SHA" --prerelease --title "Dhun downloads · current previews" --notes "Rolling development downloads. Assets are replaced after successful CI and have no artifact retention expiry. Source revisions are recorded in Android-build.json and Desktop-build.json. Desktop installers are unsigned previews. This private repository requires GitHub access. Older versioned previews remain in Releases." || gh release view preview
+          gh release upload preview installers/* --clobber

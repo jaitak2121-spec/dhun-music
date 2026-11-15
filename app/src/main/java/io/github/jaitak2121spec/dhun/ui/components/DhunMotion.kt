@@ -35,6 +35,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -64,14 +67,17 @@ internal fun DhunLaunchIntro(showOnLaunch: Boolean) {
 
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        progress.animateTo(1f, tween(760, easing = LinearEasing))
+        progress.animateTo(1f, tween(1150, easing = LinearEasing))
         finished = true
     }
     val foreground = MaterialTheme.colorScheme.onBackground
     Box(
         modifier = Modifier.fillMaxSize()
             .graphicsLayer {
-                alpha = 1f - ((progress.value - 0.62f) / 0.38f).coerceIn(0f, 1f)
+                val exit = ((progress.value - 0.78f) / 0.22f).coerceIn(0f, 1f)
+                alpha = 1f - exit
+                scaleX = 1f + exit * 0.035f
+                scaleY = scaleX
             }
             .background(MaterialTheme.colorScheme.background)
             .clearAndSetSemantics { }
@@ -85,32 +91,62 @@ internal fun DhunLaunchIntro(showOnLaunch: Boolean) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.size(160.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
-                    repeat(2) { ring ->
+                    val reveal = FastOutSlowInEasing.transform((progress.value / 0.55f).coerceIn(0f, 1f))
+                    repeat(3) { ring ->
                         drawCircle(
-                            color = foreground.copy(alpha = (1f - progress.value) * 0.10f),
-                            radius = (48f + ring * 16f + progress.value * 24f).dp.toPx(),
+                            color = foreground.copy(alpha = (1f - progress.value) * 0.07f),
+                            radius = (40f + ring * 13f + reveal * 20f).dp.toPx(),
                             style = Stroke(1.dp.toPx()),
                         )
                     }
+                    // A single drawn heartbeat leads into the approved earbud mark.
+                    val wave = Path().apply {
+                        moveTo(0f, size.height * 0.55f)
+                        lineTo(size.width * 0.26f, size.height * 0.55f)
+                        lineTo(size.width * 0.35f, size.height * 0.40f)
+                        lineTo(size.width * 0.43f, size.height * 0.72f)
+                        lineTo(size.width * 0.52f, size.height * 0.26f)
+                        lineTo(size.width * 0.61f, size.height * 0.67f)
+                        lineTo(size.width * 0.70f, size.height * 0.47f)
+                        lineTo(size.width * 0.77f, size.height * 0.55f)
+                        lineTo(size.width, size.height * 0.55f)
+                    }
+                    val measure = PathMeasure().apply { setPath(wave, false) }
+                    val segment = Path()
+                    measure.getSegment(0f, measure.length * reveal, segment, true)
+                    val waveAlpha = (1f - ((progress.value - 0.30f) / 0.25f).coerceIn(0f, 1f))
+                    drawPath(segment, foreground.copy(alpha = waveAlpha * 0.08f), style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
+                    drawPath(segment, foreground.copy(alpha = waveAlpha), style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
                 }
                 Icon(
                     painter = painterResource(R.drawable.ic_dhun_mark),
                     contentDescription = null,
                     tint = foreground,
                     modifier = Modifier.size(128.dp).graphicsLayer {
-                        val reveal = FastOutSlowInEasing.transform((progress.value * 2f).coerceIn(0f, 1f))
-                        scaleX = 0.88f + reveal * 0.12f
+                        val reveal = FastOutSlowInEasing.transform(((progress.value - 0.25f) / 0.30f).coerceIn(0f, 1f))
+                        scaleX = 0.82f + reveal * 0.18f
                         scaleY = scaleX
-                        alpha = (progress.value / 0.18f).coerceIn(0f, 1f)
+                        alpha = reveal
+                        rotationZ = (1f - reveal) * -8f
                     },
                 )
             }
-            Text("dhun", style = MaterialTheme.typography.displayLarge, color = foreground)
+            Text("dhun", style = MaterialTheme.typography.displayLarge, color = foreground,
+                modifier = Modifier.graphicsLayer {
+                    val reveal = FastOutSlowInEasing.transform(((progress.value - 0.30f) / 0.25f).coerceIn(0f, 1f))
+                    alpha = reveal
+                    translationY = (1f - reveal) * 14.dp.toPx()
+                })
             Spacer(Modifier.height(8.dp))
             Text(
                 stringResource(R.string.dhun_home_tagline),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.graphicsLayer {
+                    val reveal = ((progress.value - 0.43f) / 0.22f).coerceIn(0f, 1f)
+                    alpha = reveal
+                    translationY = (1f - reveal) * 8.dp.toPx()
+                },
             )
         }
     }

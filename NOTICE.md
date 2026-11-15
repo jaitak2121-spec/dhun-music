@@ -9,3 +9,5 @@ Modifications for Dhun include the application identity and namespace, monochrom
 The original project's signing files and publishing workflows are retained as historical reference. They must not be used as Dhun signing credentials or represented as Dhun-operated services.
 
 The earbud-and-waveform logo was reconstructed from the owner's supplied reference. The approved raster preview and its scalable implementation are in `assets/brand/`.
+
+The independent Dhun desktop companion in `desktop/` uses Electron and yt-dlp, rather than upstream's Linux/Windows-only desktop branch. Its source is GPL-3.0-only. The bundled yt-dlp release executables include GPLv3+ dependencies; the packaging script pins the exact release and checksum and includes its licence and third-party notices in the installers. Exact source links are recorded in [desktop/README.md](desktop/README.md). Electron's runtime notices accompany its distribution.
