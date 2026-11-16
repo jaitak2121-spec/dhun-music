@@ -132,9 +132,6 @@
   padding:10px 0 36px;
   min-width:0
 }
-.motionPause,.motionControl {
-  display:none
-}
 .disc {
   width:min(100%,410px);
   aspect-ratio:1;
@@ -552,41 +549,8 @@
   }
 }
 @media(prefers-reduced-motion:no-preference) {
-  .record {
-    padding-bottom:76px
-  }
-  .recordCaption {
-    bottom:40px
-  }
-  .motionPause {
-    display:block;
-    position:absolute;
-    bottom:13px;
-    left:calc(50% - 58px);
-    width:14px;
-    height:14px;
-    margin:0;
-    accent-color:#eee;
-    z-index:2
-  }
-  .motionControl {
-    display:block;
-    position:absolute;
-    bottom:0;
-    left:calc(50% - 70px);
-    width:140px;
-    padding:10px 8px 10px 32px;
-    margin:0;
-    color:#aaa;
-    font-size:10px;
-    line-height:20px;
-    cursor:pointer
-  }
   .disc:after {
-    animation:spin 24s linear infinite
-  }
-  .motionPause:checked ~ .disc:after {
-    animation-play-state:paused
+    animation:spin 4.5s ease-out both
   }
   .platform {
     transition:transform .2s ease-out,border-color .2s
@@ -609,7 +573,7 @@
   }
   @keyframes spin {
     to {
-      transform:rotate(360deg)
+      transform:rotate(72deg)
     }
   }
   .intro,.record {
