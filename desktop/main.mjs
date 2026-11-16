@@ -11,6 +11,7 @@ import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks,
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
 import { cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
+import {searchSuggestions} from './search-suggestions.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const player = path.join(app.isPackaged ? process.resourcesPath : path.join(root, 'resources'), 'player', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
@@ -55,10 +56,10 @@ function handle(name, action) {
 async function serve(request) {
   const url = new URL(request.url);
   if (url.hostname === 'app') {
-    const allowed = ['index.html', 'style.css', 'library.css', 'app.mjs', 'model.mjs', 'logo.svg'];
+    const allowed = ['index.html', 'style.css', 'library.css', 'app.mjs', 'model.mjs', 'search-suggestions.mjs', 'logo.svg'];
     const name = url.pathname.slice(1);
     if (!allowed.includes(name)) return new Response('Not found', { status: 404 });
-    const file = name === 'model.mjs' ? path.join(root, name) : path.join(root, 'renderer', name);
+    const file = ['model.mjs','search-suggestions.mjs'].includes(name) ? path.join(root, name) : path.join(root, 'renderer', name);
     return net.fetch(pathToFileURL(file).href);
   }
   const key = url.pathname.slice(1);
@@ -103,6 +104,7 @@ handle('cloudManage',cloudManage);
 session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
 session.defaultSession.setPermissionCheckHandler(() => false);
 handle('search', async value => tracksFromSearch(JSON.parse(await extract(['--flat-playlist', '--dump-single-json', '--', `ytsearch18:${searchTerm(value)} music`], true))));
+handle('suggest', value=>searchSuggestions(value,{language:app.getLocale().split('-')[0]}));
 handle('recommendations', async taste => {
   const queries=discoveryQueries(taste),generation=++discoveryGeneration,batches=[];
   let failure;

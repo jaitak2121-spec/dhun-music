@@ -58,6 +58,8 @@ The Genius live-service test is opt-in because it depends on an external website
 
 ## Development status
 
+- Predictive search offers related queries while typing, with local recent searches before typing, an exact-query fallback when suggestions are unavailable, and stale-response protection. Desktop supports arrow-key selection, Enter, Escape, IME composition and clearable local query history. Android keeps its live song/artist previews alongside up to six related completions. Live prefixes go to the suggestion source; query history is stored locally and is not uploaded to Dhun Cloud.
+
 - Upstream publishing/deployment workflows are archived in `docs/upstream-workflows/`; they do not run in Dhun.
 - Optional update checks read the public Dhun build manifests. Dismissing an update never blocks playback. Already-installed previews without this updater need one manual update first.
 - Android playback and source functionality remain inherited. This development fork is not a Play Store release.

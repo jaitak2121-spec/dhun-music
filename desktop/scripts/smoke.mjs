@@ -110,6 +110,32 @@ try {
   await expect(page.getByLabel('Music language',{exact:true})).toHaveValue('English');
   await page.getByRole('button',{name:'Reset preferences and hidden songs',exact:true}).click();
   await expect(page.locator('#discovery-tracks li')).toHaveCount(0);
+  await application.evaluate(({ipcMain})=>{
+    ipcMain.removeHandler('dhun:suggest');ipcMain.removeHandler('dhun:search');
+    ipcMain.handle('dhun:suggest',async(_event,query)=>{
+      if(query==='slow')await new Promise(resolve=>setTimeout(resolve,500));
+      return{ok:true,data:[`${query} music`,`${query} live`]};
+    });
+    ipcMain.handle('dhun:search',async()=>({ok:true,data:[{id:'abcdefghijk',title:'Search fixture',artist:'Fixture artist',duration:180}]}));
+  });
+  await page.getByLabel('Search music',{exact:true}).fill('da');
+  await expect(page.getByRole('option',{name:'da music',exact:true})).toBeVisible();
+  await page.getByLabel('Search music',{exact:true}).press('ArrowDown');
+  await page.getByLabel('Search music',{exact:true}).press('ArrowDown');
+  await page.getByLabel('Search music',{exact:true}).press('Enter');
+  await expect(page.getByLabel('Search music',{exact:true})).toHaveValue('da music');
+  await expect(page.getByRole('button',{name:'Play Search fixture',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Search music',{exact:true})).toHaveAttribute('aria-expanded','false');
+  await page.getByLabel('Search music',{exact:true}).fill('slow');
+  await page.waitForTimeout(300);
+  await page.getByLabel('Search music',{exact:true}).press('Enter');
+  await page.waitForTimeout(600);
+  await expect(page.getByLabel('Search music',{exact:true})).toHaveAttribute('aria-expanded','false');
+  await page.reload();
+  await page.getByLabel('Search music',{exact:true}).focus();
+  await expect(page.getByRole('option',{name:'da music',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Clear recent searches',exact:true}).click();
+  await expect(page.getByRole('option',{name:'da music',exact:true})).toHaveCount(0);
   await page.getByRole('button', { name: 'Make it yours' }).click();
   await page.getByRole('button', { name: 'Monochrome', exact: true }).click();
   await page.getByLabel('Appearance', { exact: true }).selectOption('dark');

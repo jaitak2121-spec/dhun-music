@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import io.github.jaitak2121spec.dhun.data.model.SearchHistoryEntity
 
@@ -33,6 +34,8 @@ object SearchHistory {
 
     /** Most recent first. */
     val recent: StateFlow<List<SearchHistoryEntity>> = _recent.asStateFlow()
+    private val _queries = MutableStateFlow<List<String>>(emptyList())
+    val queries: StateFlow<List<String>> = _queries.asStateFlow()
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("dollbloom_settings", Context.MODE_PRIVATE)
@@ -51,6 +54,17 @@ object SearchHistory {
         _recent.value = runCatching {
             json.decodeFromString(serializer, prefs.getString(KEY_HISTORY, null) ?: "[]")
         }.getOrDefault(emptyList())
+        _queries.value = runCatching {
+            json.decodeFromString(ListSerializer(String.serializer()), prefs.getString("search_query_history", "[]") ?: "[]")
+                .map { it.trim().take(160) }.filter { it.isNotEmpty() }.distinctBy { it.lowercase(java.util.Locale.ROOT) }.take(MAX_ENTRIES)
+        }.getOrDefault(emptyList())
+    }
+
+    fun recordQuery(value: String) {
+        val term = value.trim().take(160)
+        if (term.isEmpty()) return
+        _queries.value = (listOf(term) + _queries.value.filterNot { it.equals(term, true) }).take(MAX_ENTRIES)
+        prefs.edit().putString("search_query_history", json.encodeToString(ListSerializer(String.serializer()), _queries.value)).apply()
     }
 
     /**
@@ -66,7 +80,11 @@ object SearchHistory {
         save(_recent.value.filterNot { it.id.equals(id, ignoreCase = true) })
     }
 
-    fun clear() = save(emptyList())
+    fun clear() {
+        save(emptyList())
+        _queries.value = emptyList()
+        prefs.edit().remove("search_query_history").apply()
+    }
 
     private fun save(value: List<SearchHistoryEntity>) {
         _recent.value = value

@@ -102,6 +102,7 @@ fun SearchScreen(
      */
     onBrowseLongPress: ((BrowseItem) -> Unit)? = null,
     history: List<SearchHistoryEntity>,
+    recentQueries: List<String> = emptyList(),
     suggestions: List<String>,
     typeaheadResults: List<SearchResult>,
     onSubmit: () -> Unit,
@@ -202,10 +203,20 @@ fun SearchScreen(
                         )
                     }
                 }
-                results == null -> if (history.isEmpty()) {
-                    item { MessageState(stringResource(R.string.search_empty)) }
-                } else {
-                    recentSearches(history, onHistoryClick, onHistoryRemove, onHistoryClear)
+                results == null -> {
+                    if (recentQueries.isNotEmpty()) {
+                        item(key = "queries:header") {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Recent searches", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable(onClick = onHistoryClear).padding(12.dp))
+                            }
+                        }
+                        items(recentQueries.take(8), key = { "query:$it" }) { term ->
+                            SuggestionRow(term, false, { onQueryChange(term) }, { onSuggestionClick(term); focusManager.clearFocus() })
+                        }
+                    }
+                    if (history.isNotEmpty()) recentSearches(history, onHistoryClick, onHistoryRemove, onHistoryClear, if (recentQueries.isNotEmpty()) "Recently opened" else null)
+                    if (history.isEmpty() && recentQueries.isEmpty()) item { MessageState(stringResource(R.string.search_empty)) }
                 }
                 results is UiState.Loading -> songListSkeleton(circular = filter == SearchFilter.ARTISTS)
                 results is UiState.Error -> item { MessageState(results.message) }
@@ -399,13 +410,11 @@ private fun LazyListScope.searchSuggestions(
     // row. It keeps the gap under the field stable even when that row changes
     // its text or icon treatment.
     item(key = "suggestions:top-inset") { Spacer(Modifier.height(8.dp)) }
-    // Skip the echo of the typed text (element 0) — it's already visible in
-    // the search field itself — and cap at N so the list stays compact above
-    // the playable-media cards.
-    itemsIndexed(suggestions.drop(1).take(3), key = { _, term -> "suggest:$term" }) { _, term ->
+    // The exact query remains actionable even when the source is unavailable.
+    itemsIndexed(suggestions.take(7), key = { _, term -> "suggest:$term" }) { index, term ->
         SuggestionRow(
             term = term,
-            isQueryAction = false,
+            isQueryAction = index == 0,
             onFill = { onFill(term) },
             onClick = { onClick(term) },
         )
@@ -581,6 +590,7 @@ private fun LazyListScope.recentSearches(
     onClick: (SearchHistoryEntity) -> Unit,
     onRemove: (String) -> Unit,
     onClear: () -> Unit,
+    title: String? = null,
 ) {
     item(key = "recent:header") {
         Row(
@@ -590,7 +600,7 @@ private fun LazyListScope.recentSearches(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.recent_searches),
+                text = title ?: stringResource(R.string.recent_searches),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.weight(1f),

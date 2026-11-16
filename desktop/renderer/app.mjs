@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { nextIndex,discoveryQueries,diverseTracks } from './model.mjs';
+import {mergeSuggestions} from './search-suggestions.mjs';
 const $ = selector => document.querySelector(selector);
 const icons = {
   discover: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -54,6 +55,58 @@ systemMotion.addEventListener('change', event => { if (event.matches) dismissInt
 function status(message = '') { $('#status').textContent = message; }
 async function request(method, ...args) { const result = await window.dhun[method](...args); if (!result.ok) throw Error(result.error); return result.data; }
 const safe = task => async (...args) => { try { await task(...args); } catch (error) { status(error.message || 'Something went wrong. Please try again.'); } };
+const queryInput=$('#query');
+let recentSearches=read('search-history',[]);
+recentSearches=Array.isArray(recentSearches)?recentSearches.filter(term=>typeof term==='string'&&term.trim()&&term.length<=160).slice(0,20):[];
+let completionTimer,completionGeneration=0,completionOptions=[],completionIndex=-1,composingQuery=false;
+function closeSuggestions(){
+  clearTimeout(completionTimer);completionGeneration++;completionIndex=-1;
+  $('#search-completions').hidden=true;queryInput.setAttribute('aria-expanded','false');queryInput.removeAttribute('aria-activedescendant');
+}
+function selectCompletion(index){
+  completionIndex=index;
+  [...$('#search-suggestions').children].forEach((option,i)=>option.setAttribute('aria-selected',String(i===index)));
+  if(index>=0){queryInput.setAttribute('aria-activedescendant',`completion-${index}`);$('#search-suggestions').children[index]?.scrollIntoView({block:'nearest'});}
+  else queryInput.removeAttribute('aria-activedescendant');
+}
+function renderCompletions(items){
+  const selected=completionOptions[completionIndex];completionOptions=items;
+  const list=$('#search-suggestions');list.replaceChildren();
+  items.forEach((term,index)=>{
+    const option=node('li','',term);option.id=`completion-${index}`;option.setAttribute('role','option');option.setAttribute('aria-selected','false');
+    option.addEventListener('pointerdown',event=>event.preventDefault());option.addEventListener('click',()=>search(term));list.append(option);
+  });
+  $('#suggestion-label').textContent=queryInput.value.trim()?'Search suggestions':'Recent searches';
+  $('#clear-search-history').hidden=recentSearches.length===0;
+  $('#search-completions').hidden=items.length===0;
+  queryInput.setAttribute('aria-expanded',String(items.length>0));selectCompletion(selected?items.indexOf(selected):-1);
+}
+function queueCompletions(){
+  clearTimeout(completionTimer);const generation=++completionGeneration;completionIndex=-1;
+  if(composingQuery||document.activeElement!==queryInput)return;
+  const query=queryInput.value.trim();
+  const local=query?[...state.favourites,...state.recent,...state.local].flatMap(track=>[track.title,track.artist]).filter(term=>term.toLowerCase().includes(query.toLowerCase())):[];
+  renderCompletions(mergeSuggestions(query,recentSearches,local));
+  if(query.length<2)return;
+  completionTimer=setTimeout(async()=>{
+    let remote=[];try{remote=await request('suggest',query);}catch{/* Exact-query and local suggestions stay usable offline. */}
+    if(generation!==completionGeneration||document.activeElement!==queryInput||queryInput.value.trim()!==query)return;
+    renderCompletions(mergeSuggestions(query,recentSearches,[...remote,...local]));
+  },220);
+}
+queryInput.addEventListener('input',queueCompletions);queryInput.addEventListener('focus',queueCompletions);
+queryInput.addEventListener('compositionstart',()=>{composingQuery=true;closeSuggestions();});
+queryInput.addEventListener('compositionend',()=>{composingQuery=false;queueCompletions();});
+queryInput.addEventListener('keydown',event=>{
+  if(event.isComposing||event.keyCode===229||composingQuery)return;
+  if(event.key==='Escape'){event.preventDefault();closeSuggestions();return;}
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    event.preventDefault();if($('#search-completions').hidden)queueCompletions();
+    const count=completionOptions.length;if(count)selectCompletion(event.key==='ArrowDown'?(completionIndex+1)%count:(completionIndex<0?count-1:(completionIndex-1+count)%count));
+  }else if(event.key==='Enter'&&!$('#search-completions').hidden&&completionIndex>=0){event.preventDefault();search(completionOptions[completionIndex]);}
+});
+$('#search-form').addEventListener('focusout',event=>{if(!event.currentTarget.contains(event.relatedTarget))closeSuggestions();});
+$('#clear-search-history').addEventListener('click',()=>{if(!save('search-history',[]))return;recentSearches=[];queryInput.focus();queueCompletions();});
 let discoveryTaste=read('discovery-taste',{language:'',artists:'',genres:''});
 try{discoveryQueries(discoveryTaste);}catch{discoveryTaste={language:'',artists:'',genres:''};}
 let discoveryResults=[],discoveryGeneration=0;
@@ -307,6 +360,8 @@ async function togglePlayback() {
 }
 async function search(query) {
   query = query.trim(); if (!query) return;
+  closeSuggestions();
+  recentSearches=[query,...recentSearches.filter(term=>term.toLowerCase()!==query.toLowerCase())].slice(0,20);save('search-history',recentSearches);
   const generation = ++state.searchGeneration; $('#query').value = query; state.search = []; showView('search', false); status(); $('#loading').hidden = false;
   try {
     const tracks = await request('search', query);

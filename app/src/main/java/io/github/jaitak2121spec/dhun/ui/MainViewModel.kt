@@ -1667,6 +1667,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Recent searches, kept on device as rich entity records. */
     val searchHistory: StateFlow<List<SearchHistoryEntity>> = SearchHistory.recent
+    val recentQueries: StateFlow<List<String>> = SearchHistory.queries
 
     /**
      * Records a full entity payload in the history — used when the user taps
@@ -1752,6 +1753,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * a blank placeholder.
      */
     fun searchFor(term: String, filter: SearchFilter? = null) {
+        SearchHistory.recordQuery(term)
         if (filter != null) _filter.value = filter
         _query.value = term
         searchSubmitted = true
@@ -1764,7 +1766,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearSearchHistory() = SearchHistory.clear()
 
-    fun onQueryChange(newValue: String) {
+    fun onQueryChange(value: String) {
+        val newValue = value.take(160)
         _query.value = newValue
         if (newValue.isBlank()) {
             searchSubmitted = false
@@ -1780,6 +1783,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Reset the submission gate so typeahead pipelines fire again.
         searchSubmitted = false
+        _typeaheadResults.value = emptyList()
+        _suggestions.value = io.github.jaitak2121spec.dhun.data.searchCompletions(newValue, SearchHistory.queries.value)
         // While typing, surface text completions — the pipeline already feeds
         // them through [suggestRequests] and publishes results via typeahead.
         suggestRequests.tryEmit(newValue)
@@ -1792,6 +1797,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun submitSearch() {
         val q = _query.value.trim()
         if (q.isEmpty()) return
+        SearchHistory.recordQuery(q)
         searchSubmitted = true
         _suggestions.value = emptyList()
         _typeaheadResults.value = emptyList()
@@ -1965,8 +1971,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     ?: return@collectLatest
                 // Asked again on the way back; the field is live throughout.
                 if (!stillWanted(input)) return@collectLatest
-                _suggestions.value = listOf(input) +
-                    fetched.filterNot { it.equals(input, ignoreCase = true) }
+                _suggestions.value = io.github.jaitak2121spec.dhun.data.searchCompletions(input, SearchHistory.queries.value, fetched)
             }
     }
 
@@ -1995,10 +2000,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val result = YtMusicRepository.searchTypeahead(input).getOrNull()
                 // If the field moved on, drop the result silently.
-                if (_query.value != input) {
-                    _typeaheadResults.value = emptyList()
-                    return@collectLatest
-                }
+                if (_query.value != input || searchSubmitted) return@collectLatest
                 // Cap results so the dropdown doesn't grow unbounded.
                 _typeaheadResults.value = result?.rows.orEmpty().take(TYPEAHEAD_MAX_RESULTS)
             }
