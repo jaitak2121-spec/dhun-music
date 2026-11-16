@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('dhun', Object.freeze({
   search: query => ipcRenderer.invoke('dhun:search', query),
   suggest: query => ipcRenderer.invoke('dhun:suggest',query),
   recommendations: taste => ipcRenderer.invoke('dhun:recommendations', taste),
+  radio: id => ipcRenderer.invoke('dhun:radio', id),
   stream: id => ipcRenderer.invoke('dhun:stream', id),
   lyrics: track => ipcRenderer.invoke('dhun:lyrics', track),
   pickFiles: () => ipcRenderer.invoke('dhun:files'),

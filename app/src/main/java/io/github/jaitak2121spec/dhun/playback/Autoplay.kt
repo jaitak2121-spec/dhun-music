@@ -10,6 +10,12 @@ import io.github.jaitak2121spec.dhun.data.sources.SourceRegistry
 import io.github.jaitak2121spec.dhun.data.sources.TrackMatcher
 import io.github.jaitak2121spec.dhun.playback.QueueCoordinator.asQueueEntry
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
+import io.github.jaitak2121spec.dhun.data.LikeState
+import io.github.jaitak2121spec.dhun.data.model.LikeStatus
 
 /** Most AutoPlay-suggested tracks kept queued ahead of the current one at once. */
 const val MAX_QUEUED_AUTOPLAY = 10
@@ -103,7 +109,18 @@ suspend fun loadAutoplayTracks(
 ): Result<List<Song>> {
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     val related = YtMusicRepository.radio(seed).getOrElse { return Result.failure(it) }
-    val extra = QueueBuilder.extend(existing, related, limit)
+    val excluded = existing + seedSong
+    fun select(candidates: List<Song>) = QueueBuilder.extend(excluded,
+        candidates.filterNot { LikeState.overrides.value[it.videoId] == LikeStatus.DISLIKE }, limit)
+    var extra = select(related)
+    if (extra.size < limit) {
+        // Broaden through related songs, never another title search full of edits.
+        val neighbours = extra.distinctBy { QueueBuilder.artistSet(it.artist).minOrNull() }.take(2)
+        val more = coroutineScope { neighbours.map { song -> async {
+            withTimeoutOrNull(4_000) { YtMusicRepository.radio(song.videoId).getOrNull() }.orEmpty()
+        } }.awaitAll().flatten() }
+        extra = select(related + more)
+    }
     if (extra.isEmpty()) return Result.success(emptyList())
 
     return Result.success(extra.map {

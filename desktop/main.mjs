@@ -106,19 +106,27 @@ session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) 
 session.defaultSession.setPermissionCheckHandler(() => false);
 handle('search', async value => tracksFromSearch(JSON.parse(await extract(['--flat-playlist', '--dump-single-json', '--', `ytsearch18:${searchTerm(value)} music`], true))));
 handle('suggest', value=>searchSuggestions(value,{language:app.getLocale().split('-')[0]}));
+handle('radio', async id => {
+  if (!validId(id)) throw Error('Invalid station seed.');
+  return tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--yes-playlist','--playlist-end','30','--dump-single-json','--',`https://www.youtube.com/watch?v=${id}&list=RD${id}`],false,20000)));
+});
 handle('recommendations', async taste => {
   const queries=[...discoveryQueries(taste),[taste.language,taste.genres,'new music discoveries'].filter(Boolean).join(' ')],generation=++discoveryGeneration,batches=[];
   let failure;
-  for(const query of queries){
+  // Two catalogue processes at once leave capacity for actual audio playback.
+  for(let i=0;i<queries.length;i+=2){
     if(generation!==discoveryGeneration)return[];
-    try{batches.push(tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--dump-single-json','--',`ytsearch12:${query}`],false,20000))));}
-    catch(error){failure=error;}
+    const results=await Promise.all(queries.slice(i,i+2).map(async query=>{
+      try{return tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--dump-single-json','--',`ytsearch12:${query}`],false,12000)));}
+      catch(error){failure=error;return[];}
+    }));
+    batches.push(...results.filter(batch=>batch.length));
   }
   if(generation!==discoveryGeneration)return[];
   if(!batches.length&&failure)throw failure;
   return diverseTracks(batches);
 });
-handle('stream', async id => {
+async function bufferStream(id) {
   if (!validId(id)) throw Error('Invalid track. Search for it again.');
   const key = `stream-${id}`;
   if (!bufferedFiles.has(key)) {
@@ -135,6 +143,12 @@ handle('stream', async id => {
     bufferedFiles.set(key, output);
   }
   return `dhun://audio/${key}`;
+}
+const pendingStreams = new Map();
+handle('stream', id => {
+  if (!validId(id)) throw Error('Invalid track.');
+  if (!pendingStreams.has(id)) pendingStreams.set(id, bufferStream(id).finally(() => pendingStreams.delete(id)));
+  return pendingStreams.get(id);
 });
 handle('files', async () => {
   const result = await dialog.showOpenDialog(window, { title: 'Add music to Dhun', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Audio', extensions: ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'opus'] }] });

@@ -63,27 +63,36 @@ object YtMusicRepository {
         HomeFeed(InnertubeParser.parseHome(home), InnertubeParser.continuationToken(home))
     }
 
-    suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet()): Result<List<HomeShelf>> = call("discovery") {
+    suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet(),
+        onPartial: (List<HomeShelf>) -> Unit = {},
+    ): Result<List<HomeShelf>> = call("discovery") {
         val listening = if (AppSettings.discoveryLearning.value) io.github.jaitak2121spec.dhun.data.stats.ListeningStats.summary(io.github.jaitak2121spec.dhun.data.stats.ReplayPeriod.THIS_MONTH) else null
         val learned = listening?.songs.orEmpty().filter { it.ms >= 30_000 && it.song.videoId !in excluded && it.song.localUri == null && it.song.localPath == null }
             .sortedByDescending { it.ms }.map { it.song.artist }
-        val batches = coroutineScope {
+        val batches = mutableListOf<List<Song>>()
+        fun shelves(): List<HomeShelf> {
+            val songs = diverseDiscovery(batches, excluded)
+            return if (songs.isEmpty()) emptyList() else listOf(HomeShelf(
+                title = "Made for you",
+                subtitle = if (learned.isNotEmpty()) "Your listening and music taste, mixed with broader discoveries" else "Your music taste, mixed with broader discoveries",
+                items = songs.map { ShelfItem(it.title, it.artist, it.thumbnailUrl, it.videoId, null) },
+            ))
+        }
+        coroutineScope {
             personalDiscoveryQueries(taste, learned).map { query -> async {
-                withTimeoutOrNull(15_000L) {
-                    val songs = search(query, SearchFilter.SONGS).getOrNull().orEmpty()
-                        .filterIsInstance<SearchResult.Track>().map { it.song }
-                    val related = songs.firstOrNull()?.let { radio(it.videoId).getOrNull() }.orEmpty()
-                    // Radio adds discovery; catalogue results remain a useful fallback.
-                    (related + songs).distinctBy { it.videoId }.take(30)
+                // Publish the first useful catalogue response; don't wait for an
+                // extra radio request per query or the slowest search to paint Home.
+                val songs = withTimeoutOrNull(8_000L) {
+                    search(query, SearchFilter.SONGS).getOrNull().orEmpty()
+                        .filterIsInstance<SearchResult.Track>().map { it.song }.take(30)
                 }.orEmpty()
+                synchronized(batches) {
+                    batches += songs
+                    shelves().takeIf { it.isNotEmpty() }?.let(onPartial)
+                }
             } }.awaitAll()
         }
-        val songs = diverseDiscovery(batches, excluded)
-        if (songs.isEmpty()) emptyList() else listOf(HomeShelf(
-            title = "Made for you",
-            subtitle = if (learned.isNotEmpty()) "Your listening and music taste, mixed with broader discoveries" else "Your music taste, mixed with broader discoveries",
-            items = songs.map { ShelfItem(it.title, it.artist, it.thumbnailUrl, it.videoId, null) },
-        ))
+        shelves()
     }
 
     /** Recently played is rendered independently, at the top of the Play page. */

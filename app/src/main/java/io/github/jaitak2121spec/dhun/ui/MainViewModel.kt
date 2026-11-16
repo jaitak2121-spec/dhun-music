@@ -1418,7 +1418,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun loadHome() {
         val identity = listenerKey()
         val generation = homeLoadGeneration.incrementAndGet()
-        _home.value = UiState.Loading
+        if (_home.value !is UiState.Success) _home.value = UiState.Loading
         homeContinuation = null
         homeSeenTitles.clear()
         _homeLoadingMore.value = false
@@ -1427,7 +1427,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val taste = AppSettings.discoveryTaste.value
         viewModelScope.launch {
             try {
-                val result = YtMusicRepository.discovery(taste, discoveryExclusions())
+                val result = YtMusicRepository.discovery(taste, discoveryExclusions()) { shelves ->
+                    if (isCurrentHomeLoad(identity, generation)) _home.value = UiState.Success(shelves)
+                }
                 if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
                     onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
                 )

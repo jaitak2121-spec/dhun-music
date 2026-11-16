@@ -23,6 +23,7 @@ import javax.crypto.spec.GCMParameterSpec
 class CloudAccounts(context: Context) {
     companion object {
         val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
+        val displayName = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
         val accountReturns = kotlinx.coroutines.flow.MutableStateFlow(0)
         fun consumeReturn(intent: Intent) {
             // A return link only opens the account screen. The saved secret,
@@ -37,7 +38,7 @@ class CloudAccounts(context: Context) {
             .callTimeout(30, TimeUnit.SECONDS).build()
     }
     private val prefs = context.applicationContext.getSharedPreferences("dhun_cloud_session", Context.MODE_PRIVATE)
-    init { connectionState.value = connected }
+    init { connectionState.value = connected; displayName.value = prefs.getString("displayName", null).takeIf { connected } }
     val connected: Boolean get() = prefs.contains("session")
     val pending: Boolean get() = prefs.contains("pending") && prefs.getLong("pendingExpires", 0) > System.currentTimeMillis()
     private fun key(create: Boolean): SecretKey = synchronized(CloudAccounts::class.java) {
@@ -79,7 +80,7 @@ class CloudAccounts(context: Context) {
             val source = response.body?.source() ?: error("No response from Dhun Cloud.")
             check(!source.request(2_000_001)) { "Cloud response was too large." }
             val data = try { JSONObject(source.readUtf8()) } catch (_: Exception) { error("Dhun Cloud is temporarily unavailable.") }
-            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false }
+            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false; displayName.value = null }
             check(response.isSuccessful) { data.optString("error", "Cloud request failed.") }
             return data
         }
@@ -103,13 +104,20 @@ class CloudAccounts(context: Context) {
             true
         }
     }
-    suspend fun account(): JSONObject = withContext(Dispatchers.IO) { request("device-account").getJSONObject("account") }
+    suspend fun account(): JSONObject = withContext(Dispatchers.IO) {
+        request("device-account").getJSONObject("account").also {
+            val name = it.optString("name").trim().take(100)
+            prefs.edit().putString("displayName", name).apply()
+            displayName.value = name
+        }
+    }
     suspend fun backup(): JSONObject = withContext(Dispatchers.IO) { request("device-backup") }
     suspend fun upload(value: JSONObject): JSONObject = withContext(Dispatchers.IO) { request("device-backup", value) }
     suspend fun disconnect() = withContext(Dispatchers.IO) {
         request("device-disconnect", JSONObject())
         check(prefs.edit().clear().commit()) { "Could not clear the device connection." }
         connectionState.value = false
+        displayName.value = null
     }
-    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false }
+    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false; displayName.value = null }
 }

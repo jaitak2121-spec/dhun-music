@@ -407,6 +407,11 @@ private fun DhunApp(
     remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
     val dhunSignedIn by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.connectionState.collectAsStateWithLifecycle()
     var showDhunAccount by remember { mutableStateOf(false) }
+    val dhunName by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.displayName.collectAsStateWithLifecycle()
+    val greetingVariant = remember { (System.currentTimeMillis() / 900_000L % 3).toInt() }
+    var showDevicePlaylists by remember { mutableStateOf(false) }
+    var devicePlaylistSong by remember { mutableStateOf<Song?>(null) }
+
     val accountReturns by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.accountReturns.collectAsStateWithLifecycle()
     LaunchedEffect(accountReturns) { if (accountReturns > 0) showDhunAccount = true }
     if (showDhunAccount) io.github.jaitak2121spec.dhun.ui.screens.CloudBackupDialog(onDismiss = {
@@ -1250,6 +1255,11 @@ private fun DhunApp(
      * remixes of the same song. Album, artist and playlist pages keep [play],
      * where the surrounding list *is* the thing the user asked for.
      */
+    if (showDevicePlaylists) io.github.jaitak2121spec.dhun.ui.screens.DevicePlaylistsDialog(
+        songToAdd = devicePlaylistSong, queue = player.queue, onPlay = play,
+        onDismiss = { showDevicePlaylists = false; devicePlaylistSong = null },
+    )
+
     val playRadio: (Song, QueueSource) -> Unit = { song, source ->
         playRequestGeneration++
         activeRadioSeed = null
@@ -2728,9 +2738,11 @@ private fun DhunApp(
                         TAB_HOME -> HomeScreen(
                             dhunSignedIn = dhunSignedIn,
                             onTasteChanged = viewModel::loadHome,
+                            onListenTogether = { showListenTogether = true },
+                            onDevicePlaylists = { devicePlaylistSong = null; showDevicePlaylists = true },
                             state = homeState,
                             listState = homeListState,
-                            title = stringResource(R.string.listen_now),
+                            title = dhunName?.takeIf { it.isNotBlank() }?.let { io.github.jaitak2121spec.dhun.ui.screens.homeGreeting(it, greetingVariant) } ?: stringResource(R.string.listen_now),
                             signedIn = signedIn,
                             onSignIn = { showDhunAccount = true },
                             onDiscover = { query ->
@@ -2938,6 +2950,7 @@ private fun DhunApp(
                             // does nothing; see [onBrowseLongPress].
                             onShelfItemLongPress = onBrowseLongPress,
                             onNewPlaylist = { creatingPlaylist = true },
+                            onDevicePlaylists = { devicePlaylistSong = null; showDevicePlaylists = true },
                             onShowAll = { shelf -> libraryShowAll = shelf },
                             replayCards = replayCards,
                             replayHolder = account?.name.orEmpty(),
@@ -3576,6 +3589,7 @@ private fun DhunApp(
                             controller?.seekToNextMediaItem()
                         }
                     },
+                    onAddToDevicePlaylist = { songActions = null; devicePlaylistSong = song; showDevicePlaylists = true },
                     onAddToPlaylist = {
                         songActions = null
                         viewModel.loadPlaylists()

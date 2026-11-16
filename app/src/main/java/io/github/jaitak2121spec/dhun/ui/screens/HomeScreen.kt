@@ -120,6 +120,8 @@ fun HomeScreen(
     loadingMore: Boolean = false,
     recentlyPlayedLoading: Boolean = false,
     onTasteChanged: () -> Unit = {},
+    onListenTogether: (() -> Unit)? = null,
+    onDevicePlaylists: (() -> Unit)? = null,
 ) {
     val recentsViewType by AppSettings.homeRecentsViewType.collectAsStateWithLifecycle()
     val motion = dhunMotionEnabled()
@@ -140,7 +142,7 @@ fun HomeScreen(
         ) {
             item {
                 Text(
-                    text = if (signedIn) title else stringResource(R.string.discovery_title),
+                    text = if (signedIn || dhunSignedIn) title else stringResource(R.string.discovery_title),
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
@@ -149,6 +151,12 @@ fun HomeScreen(
             item {
                 TextButton(onClick = { showTaste = true }, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) {
                     Text(if (taste.configured) "Fine-tune your music taste" else "Personalise your recommendations")
+                }
+            }
+            item {
+                Row(Modifier.padding(horizontal = PAGE_GUTTER)) {
+                    onListenTogether?.let { action -> TextButton(onClick = action) { Text("Listen together") } }
+                    onDevicePlaylists?.let { action -> TextButton(onClick = action) { Text("Your playlists") } }
                 }
             }
             if (!signedIn && !taste.configured) {

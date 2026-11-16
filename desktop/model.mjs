@@ -33,7 +33,7 @@ export function diverseTracks(batches, excluded = [], limit = 12) {
   const ids=new Set(excluded),recordings=new Set(),artists=new Map(),result=[];
   for(let i=0;i<Math.max(0,...batches.map(batch=>batch.length));i++)for(const batch of batches){
     const track=batch[i];if(!track||track.local||!validId(track.id)||typeof track.title!=='string'||typeof track.artist!=='string')continue;
-    const artist=track.artist.toLocaleLowerCase().replace(/\s*-\s*topic$|vevo$/gi,'').trim();
+    const artist=track.artist.toLocaleLowerCase().replace(/\s*-\s*topic$|vevo$|official$/gi,'').trim();
     const title=track.title.toLocaleLowerCase().replace(/\([^)]*(?:official|lyrics?|audio|video)[^)]*\)|\[[^\]]*(?:official|lyrics?|audio|video)[^\]]*\]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
     const recording=`${artist}:${title}`;
     if(ids.has(track.id)||recordings.has(recording)||(artists.get(artist)||0)>=3)continue;
@@ -60,4 +60,28 @@ export function listeningTaste(taste, signals = [], favourites = []) {
   const explicit = taste.artists.split(',').map(a=>a.trim()).filter(Boolean);
   const artists = learned.length ? [...explicit.slice(0,1),...learned] : explicit;
   return {...taste,artists:[...new Set(artists)].slice(0,3).join(', ').slice(0,160)};
+}
+
+// Automatic queues group edits/covers with the original; manual picks are untouched.
+export function recommendationTitle(raw, artist='') {
+  const versions='remix|cover|slowed|sped[ -]?up|speed[ -]?up|reverb|lo[ -]?fi|nightcore|acoustic|live|instrumental|karaoke|remaster(?:ed)?';
+  const title=raw.toLowerCase().replace(new RegExp(`[\\(\\[][^)\\]]*\\b(?:${versions})\\b[^)\\]]*[\\)\\]]`,'gi'),' ')
+    .replace(new RegExp(`(?:\\s+[-–—:]\\s*|\\s+(?=slowed\\b|sped[ -]?up\\b|speed[ -]?up\\b|lo[ -]?fi\\b))(?:${versions})\\b.*$`,'gi'),' ')
+    .split(' | ')[0].replace(/\([^)]*(?:official|lyrics?|audio|video|from)[^)]*\)|\[[^\]]*\]|\b(?:official (?:music video|video|audio)|lyrical video|full video)\b/gi,' ')
+    .replace(/[^\p{L}\p{N}]+/gu,' ').replace(/\s+/g,' ').trim();
+  const words=title.split(' '),credit=artistKey(artist).replace(/ /g,'');
+  for(let i=1;credit&&i<words.length&&i<=6;i++)if(words.slice(0,i).join('')===credit)return words.slice(i).join(' ');
+  return title;
+}
+const artistKey = raw => raw.toLowerCase().replace(/\s*-\s*topic$|vevo$|official$/gi,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+export function stationTracks(seed, existing, candidates, limit=10) {
+  const taken=[...existing,seed],result=[],counts=new Map();
+  let previous=artistKey(seed.artist);
+  const remaining=candidates.filter(t=>t&&!t.local&&validId(t.id)&&typeof t.title==='string'&&typeof t.artist==='string'&&(!t.duration||t.duration<900));
+  while(result.length<limit&&remaining.length){
+    const eligible=remaining.filter(t=>!taken.some(old=>old.id===t.id||recommendationTitle(old.title,old.artist)===recommendationTitle(t.title,t.artist))&&(counts.get(artistKey(t.artist))||0)<2);
+    const track=eligible.find(t=>artistKey(t.artist)!==previous)||eligible[0];if(!track)break;
+    remaining.splice(remaining.indexOf(track),1);previous=artistKey(track.artist);counts.set(previous,(counts.get(previous)||0)+1);taken.push(track);result.push(track);
+  }
+  return result;
 }

@@ -88,6 +88,7 @@ fun LibraryScreen(
     onShelfItemClick: (ShelfItem) -> Unit,
     onShelfItemLongPress: (ShelfItem) -> Unit,
     onNewPlaylist: () -> Unit,
+    onDevicePlaylists: (() -> Unit)? = null,
     /**
      * A shelf's "Show all" — every shelf's row here stops at five cards (see
      * [LibraryGridShelf]), so this is the only way to reach whatever didn't
@@ -146,6 +147,11 @@ fun LibraryScreen(
             // Drawn whether or not anything has been played: with nothing behind
             // it the page still has to say the feature exists, or the only way
             // to discover it is to have already used it.
+            if (onDevicePlaylists != null) item(key = "device-playlists") {
+                androidx.compose.material3.TextButton(onClick = onDevicePlaylists, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) {
+                    Text("Your playlists · On this device")
+                }
+            }
             item(key = "replay") {
                 if (replayCards.isEmpty()) {
                     // Keep Replay discoverable before there is enough listening

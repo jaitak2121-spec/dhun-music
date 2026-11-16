@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { nextIndex,discoveryQueries,diverseTracks,listeningTaste } from './model.mjs';
+import { nextIndex,discoveryQueries,diverseTracks,listeningTaste,stationTracks } from './model.mjs';
 import {mergeSuggestions} from './search-suggestions.mjs';
 const $ = selector => document.querySelector(selector);
 const icons = {
@@ -29,7 +29,8 @@ function node(tag, className, text) { const element = document.createElement(tag
 function read(key, fallback) { try { return JSON.parse(localStorage.getItem(`dhun.${key}`)) ?? fallback; } catch { return fallback; } }
 function save(key, value) { try { localStorage.setItem(`dhun.${key}`, JSON.stringify(value)); return true; } catch { status('Device storage is full. Your latest changes could not be saved.'); return false; } }
 function storedTracks(key) { const tracks = read(key, []); return Array.isArray(tracks) ? tracks.filter(track => track && typeof track.id === 'string' && typeof track.title === 'string' && typeof track.artist === 'string').slice(0, 1000) : []; }
-const state = { view: 'discover', search: [], favourites: storedTracks('favourites'), recent: storedTracks('recent'), local: storedTracks('local'), queue: storedTracks('queue'), index: -1, shuffle: false, repeat: false, playing: false, resolving: false, generation: 0, searchGeneration: 0 };
+const state = { view: 'discover', search: [], favourites: storedTracks('favourites'), recent: storedTracks('recent'), local: storedTracks('local'), queue: storedTracks('queue'), index: -1, shuffle: false, repeat: false, playing: false, resolving: false, generation: 0, searchGeneration: 0, station: false };
+state.station = state.queue.some(track=>track.automatic===true);
 state.favourites = state.favourites.filter((track, index, all) => all.findIndex(item => item.id === track.id) === index);
 const audio = $('#audio');
 const preferences = read('preferences', {});
@@ -122,7 +123,7 @@ function recordListening(skipped=false){
   listeningSignals=[entry,...listeningSignals.filter(s=>s.id!==track.id)].slice(0,200);
   save('listening-signals',listeningSignals);listeningCounted=true;
 }
-let discoveryResults=[],discoveryGeneration=0;
+let discoveryResults=storedTracks('discovery-cache'),discoveryGeneration=0;
 let hiddenSuggestions=read('hidden-suggestions',[]);
 if(!Array.isArray(hiddenSuggestions))hiddenSuggestions=[];
 hiddenSuggestions=hiddenSuggestions.filter(id=>typeof id==='string'&&/^[A-Za-z0-9_-]{11}$/.test(id)).slice(-500);
@@ -132,7 +133,7 @@ function renderDiscovery(){
   for(const [index,track] of tracks.entries()){
     const row=node('li','track');const play=node('button','track-play');play.setAttribute('aria-label',`Play recommendation ${track.title}`);
     const copy=node('span','track-copy');copy.append(node('strong','',track.title),node('span','',track.artist));play.append(artwork(track),copy);
-    play.addEventListener('click',safe(async()=>{state.queue=[...tracks];save('queue',state.queue);await playAt(index);}));
+    play.addEventListener('click',safe(async()=>{await startStation(track);}));
     const heart=iconButton('heart',`Favourite ${track.title}`,()=>toggleFavourite(track),isFavourite(track));heart.dataset.likeId=track.id;
     const dismiss=iconButton('minus',`Not interested in ${track.title}`,()=>{
       const next=[...hiddenSuggestions.filter(id=>id!==track.id),track.id].slice(-500);
@@ -146,14 +147,14 @@ function renderDiscovery(){
 async function loadDiscovery(){
   const generation=++discoveryGeneration,configured=discoveryQueries(discoveryTaste).length>0;
   $('#discovery-refresh').hidden=false;$('#discovery-edit').textContent=configured?'Fine-tune your music taste':'Choose your music taste';
-  discoveryResults=[];renderDiscovery();
+  renderDiscovery();
   $('#discovery-loading').hidden=false;
   $('#discovery-refresh').disabled=true;
   $('#discovery-status').textContent='Finding music based on your choices…';
   try{
     const tracks=await request('recommendations',useListening?listeningTaste(discoveryTaste,listeningSignals,state.favourites):discoveryTaste);
     if(generation!==discoveryGeneration)return;
-    discoveryResults=diverseTracks([tracks],hiddenSuggestions);renderDiscovery();
+    discoveryResults=diverseTracks([tracks],hiddenSuggestions);save('discovery-cache',discoveryResults);renderDiscovery();
     $('#discovery-status').textContent=discoveryResults.length?'Your music taste and qualified listening, blended with broader discoveries. Listening signals stay on this device.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
   }catch(error){if(generation===discoveryGeneration)$('#discovery-status').textContent=`Recommendations unavailable: ${error.message} Your music library is unchanged.`;}
   finally{if(generation===discoveryGeneration){$('#discovery-loading').hidden=true;$('#discovery-refresh').disabled=false;}}
@@ -259,7 +260,8 @@ function renderTracks() {
     const play = node('button', 'track-play'); play.setAttribute('aria-label', `Play ${track.title}`);
     play.append(artwork(track)); const copy = node('span', 'track-copy'); copy.append(node('strong', '', track.title), node('span', '', track.artist)); play.append(copy);
     play.addEventListener('click', safe(async () => {
-      if (state.view !== 'queue') { state.queue = [...tracks]; save('queue', state.queue); }
+      if (state.view === 'search') return startStation(track);
+      if (state.view !== 'queue') { state.station = false; state.queue = tracks.map(item=>({...item,manual:false,automatic:false})); save('queue', state.queue); }
       await playAt(index);
     }));
     row.append(play, node('span', 'track-time', track.duration ? time(track.duration) : '—'));
@@ -271,7 +273,7 @@ function renderTracks() {
       else if (index < state.index) state.index--;
       save('queue', state.queue); updatePlayer(); renderTracks();
     }));
-    else row.append(iconButton('plus', `Add ${track.title} to queue`, () => { state.queue.push(track); save('queue', state.queue); updatePlayer(); status(`Added ${track.title} to your queue.`); }));
+    else row.append(iconButton('plus', `Add ${track.title} to queue`, () => { state.queue.push({...track,manual:true,automatic:false}); save('queue', state.queue); updatePlayer(); status(`Added ${track.title} to your queue.`); }));
     list.append(row);
   });
   updateLikes();
@@ -286,6 +288,29 @@ function updatePlayer() {
   $('#shuffle').setAttribute('aria-pressed', String(state.shuffle)); $('#repeat').setAttribute('aria-pressed', String(state.repeat));
   updateLikes();
 }
+let radioGeneration = -1;
+function warmNext() {
+  const next=state.queue[state.index+1];
+  if(next&&!next.local&&!state.shuffle) request('stream',next.id).catch(()=>{});
+}
+async function fillStation() {
+  const seed=current(),generation=state.generation;
+  const upcoming=state.queue.length-state.index-1;
+  if(!state.station||!seed||seed.local||upcoming>=6||radioGeneration===generation)return;
+  radioGeneration=generation;
+  try {
+    const candidates=await request('radio',seed.id);
+    if(generation!==state.generation||!state.station)return;
+    const extra=stationTracks(seed,[...state.queue,...state.recent],candidates,10-upcoming);
+    state.queue.push(...extra.map(track=>({...track,automatic:true,manual:false})));
+    save('queue',state.queue);updatePlayer();if(state.view==='queue')renderTracks();warmNext();
+  } catch { if(generation===state.generation) status('Could not load more related songs. Your current queue is kept.'); }
+}
+async function startStation(track) {
+  const manual=state.queue.slice(state.index+1).filter(item=>item.manual===true);
+  state.station=true;state.queue=[{...track,automatic:false,manual:false},...manual];save('queue',state.queue);
+  await playAt(0);
+}
 async function playAt(index) {
   const track = state.queue[index]; if (!track) return;
   recordListening(true);listenedMs=0;listeningTick=performance.now();listeningCounted=false;listeningTrack=null;
@@ -298,6 +323,7 @@ async function playAt(index) {
     audio.src = source; await audio.play();
     if (generation !== state.generation) return;
     listeningTrack=track;listeningTick=performance.now();
+    warmNext();void fillStation();
     state.recent = [track, ...state.recent.filter(item => item.id !== track.id)].slice(0, 100);
     save('recent', state.recent);
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist });

@@ -784,6 +784,7 @@ class PlaybackService : MediaLibraryService() {
                 consecutiveErrorSkips = 0
             }
             if (isPlaying) registerCurrentPlay()
+            if (isPlaying) loadAutoplayForCurrentTrack()
             // Nothing to read ahead for while paused, and a pause is often
             // the last thing that happens before the process goes idle.
             if (isPlaying) prefetchAround(exoPlayer) else cancelPrefetch()
@@ -2274,6 +2275,9 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun loadAutoplayForCurrentTrack() {
         val exoPlayer = player ?: return
+        // Give the selected song's extraction/buffer requests the network first.
+        // onIsPlayingChanged starts recommendations once audio has begun.
+        if (!exoPlayer.isPlaying && exoPlayer.playbackState != Player.STATE_ENDED) return
         val party = ListenTogether.state.value
         if (!autoplayEnabled(party) ||
             exoPlayer.repeatMode == Player.REPEAT_MODE_ALL ||

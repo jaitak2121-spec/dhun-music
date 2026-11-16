@@ -141,11 +141,11 @@ class QueueBuilderTest {
     }
 
     @Test
-    fun `the seed's own artist gets more room than the rest`() {
+    fun `the seed artist cannot dominate automatic suggestions`() {
         val seed = song("seed", "Seed", "Diljit Dosanjh")
         val candidates = (1..8).map { song("v$it", "Song $it", "Diljit Dosanjh") }
         val extra = QueueBuilder.extend(listOf(seed), candidates, limit = 10)
-        assertEquals(4, extra.size)
+        assertEquals(2, extra.size)
     }
 
     @Test
@@ -159,4 +159,23 @@ class QueueBuilderTest {
         val extra = QueueBuilder.extend(listOf(seed), candidates, limit = 10)
         assertEquals(listOf("v1", "v2"), extra.map { it.videoId })
     }
+    @Test
+    fun `autoplay excludes alternate versions and covers while manual remixes stay distinct`() {
+        val seed = song("seed", "Perfect", "Ed Sheeran")
+        val candidates = listOf(song("slow", "Perfect (Slowed + Reverb)", "Ed Sheeran"),
+            song("cover", "Perfect (Acoustic Cover)", "Another singer"),
+            song("fast", "Perfect - Sped Up", "Ed Sheeran"), song("new", "Photograph", "Ed Sheeran"))
+        assertEquals(listOf("new"), QueueBuilder.extend(listOf(seed), candidates, 10).map { it.videoId })
+        assertFalse(QueueBuilder.isSameRecording(seed, song("remix", "Perfect (Remix)", "Ed Sheeran")))
+        assertTrue(QueueBuilder.extend(listOf(song("slow", "Sajni (Slowed)")), listOf(song("original", "Sajni")), 10).isEmpty())
+    }
+
+    @Test
+    fun `recommendations interleave artists in source order`() {
+        val candidates = listOf(song("a1", "One", "A"), song("a2", "Two", "A"),
+            song("b1", "Three", "B"), song("b2", "Four", "B"), song("c1", "Five", "C"))
+        assertEquals(listOf("a1", "b1", "a2", "b2", "c1"), QueueBuilder.extend(emptyList(), candidates, 10).map { it.videoId })
+        assertTrue(QueueBuilder.extend(emptyList(), candidates, 0).isEmpty())
+    }
+
 }

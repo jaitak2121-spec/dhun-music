@@ -1334,19 +1334,20 @@ fun NowPlayingScreen(
                 // The same two buzzes the transport glyphs give, so swiping the
                 // sleeve and tapping skip feel like one gesture with two
                 // spellings.
-                val crossed = total <= -swipeThreshold || total >= swipeThreshold
+                // Swipe left for Queue; right for Lyrics. Transport buttons still skip.
                 when {
                     // Still tracks the finger and still springs back, so the
                     // sleeve does not feel dead — it just says why it did not
                     // move on.
-                    controlsLocked -> if (crossed) onBlockedControl()
                     total <= -swipeThreshold -> {
-                        haptics.play(Haptic.SkipNext)
-                        onNext()
+                        haptics.play(Haptic.ToggleOn)
+                        queueControlsOpen = true
+                        queueOpen = true
+                        closeLyrics()
                     }
                     total >= swipeThreshold -> {
-                        haptics.play(Haptic.SkipPrevious)
-                        onPrevious()
+                        haptics.play(Haptic.ToggleOn)
+                        openLyrics()
                     }
                 }
                 setSwipeOffset(0f)

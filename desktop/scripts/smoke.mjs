@@ -91,6 +91,7 @@ try {
   await page.getByRole('button', { name: 'Discover', exact: true }).click();
   // Deterministic UI contract check; source extraction is covered separately by live tests.
   await application.evaluate(({ipcMain})=>{
+    ipcMain.removeHandler('dhun:radio');ipcMain.handle('dhun:radio',async()=>({ok:true,data:[]}));
     ipcMain.removeHandler('dhun:recommendations');
     ipcMain.handle('dhun:recommendations',async()=>({ok:true,data:[
       {id:'abcdefghijk',title:'Discovery fixture one',artist:'Fixture artist one',duration:180},

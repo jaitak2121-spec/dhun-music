@@ -23,49 +23,47 @@ object QueueBuilder {
     /** No more than this many tracks by one artist in a single batch. */
     private const val PER_ARTIST_LIMIT = 2
 
-    /** The artist the station was seeded on gets more room, but not the run of it. */
-    private const val SEED_ARTIST_LIMIT = 4
-
-    /**
-     * The subset of [candidates] worth appending after [existing]: nothing
-     * already queued, nothing repeated, at most [limit] tracks.
-     */
+    /** Automatic suggestions use song families; manual queues retain exact recordings. */
     fun extend(existing: List<Song>, candidates: List<Song>, limit: Int): List<Song> {
+        if (limit <= 0) return emptyList()
         val taken = existing.toMutableList()
         val perArtist = mutableMapOf<String, Int>()
-        val seedArtists = existing.lastOrNull()?.artist?.let(::artistSet).orEmpty()
         val out = mutableListOf<Song>()
-
-        // A mix pairs all but every track with its own music-video upload —
-        // the same recording under a different id, titled far enough apart
-        // ("Dildaara (Stand By Me)" against "Lyrical Video: Dildara Song")
-        // that no title match will catch it. The catalogue cut is the one a
-        // music app wants; videos only stand in when there is nothing else.
         val songsOnly = candidates.filterNot { it.isVideo }
-        val ordered = songsOnly.ifEmpty { candidates }
-
-        for (candidate in ordered) {
-            if (out.size >= limit) break
-            if (taken.any { isSameRecording(it, candidate) }) continue
-
-            val artists = artistSet(candidate.artist)
-            val key = artists.minOrNull()
-            if (key != null) {
-                val cap = if (artists.any { it in seedArtists }) {
-                    SEED_ARTIST_LIMIT
-                } else {
-                    PER_ARTIST_LIMIT
-                }
-                val played = perArtist[key] ?: 0
-                if (played >= cap) continue
-                perArtist[key] = played + 1
+        val remaining = songsOnly.ifEmpty { candidates }.toMutableList()
+        var previous = existing.lastOrNull()?.artist?.let(::artistSet).orEmpty()
+        while (out.size < limit && remaining.isNotEmpty()) {
+            val eligible = remaining.filter { candidate ->
+                taken.none { isSameRecommendation(it, candidate) } &&
+                    (artistSet(candidate.artist).minOrNull()?.let { perArtist[it] } ?: 0) < PER_ARTIST_LIMIT
             }
-
+            // Keep upstream relevance order, but avoid consecutive artists when possible.
+            val candidate = eligible.firstOrNull { artistSet(it.artist).none { name -> name in previous } }
+                ?: eligible.firstOrNull() ?: break
+            remaining.remove(candidate)
+            val artists = artistSet(candidate.artist)
+            artists.minOrNull()?.let { perArtist[it] = (perArtist[it] ?: 0) + 1 }
+            previous = artists
             taken += candidate
             out += candidate
         }
         return out
     }
+
+    /** Covers, edits and remixes are valid manual choices, but repetitive autoplay. */
+    internal fun isSameRecommendation(a: Song, b: Song): Boolean {
+        if (isSameRecording(a, b)) return true
+        val title = recommendationTitle(a.title)
+        if (title.isEmpty() || title != recommendationTitle(b.title)) return false
+        val left = artistSet(a.artist)
+        val right = artistSet(b.artist)
+        return left.isEmpty() || right.isEmpty() || left.any { it in right } ||
+            VARIANT.containsMatchIn(a.title) || VARIANT.containsMatchIn(b.title)
+    }
+
+    internal fun recommendationTitle(raw: String): String = normalisedTitle(
+        raw.replace(VARIANT_GROUP, " ").replace(VARIANT_SUFFIX, " ")
+    )
 
     /**
      * Whether two entries are the same recording. Ids differ between the audio
@@ -102,6 +100,11 @@ object QueueBuilder {
         .map { it.replace(PUNCTUATION, " ").replace(SPACES, " ").trim() }
         .filter { it.isNotEmpty() }
         .toSet()
+
+    private const val VERSIONS = "remix|cover|slowed|sped[ -]?up|speed[ -]?up|reverb|lo[ -]?fi|nightcore|acoustic|live|instrumental|karaoke|remaster(?:ed)?"
+    private val VARIANT = Regex("\\b(?:$VERSIONS)\\b", RegexOption.IGNORE_CASE)
+    private val VARIANT_GROUP = Regex("""[\(\[][^)\]]*\b(?:$VERSIONS)\b[^)\]]*[\)\]]""", RegexOption.IGNORE_CASE)
+    private val VARIANT_SUFFIX = Regex("""(?:\s+[-–—:]\s*|\s+(?=slowed\b|sped[ -]?up\b|speed[ -]?up\b|lo[ -]?fi\b))(?:$VERSIONS)\b.*$""", RegexOption.IGNORE_CASE)
 
     private val NOISE = Regex(
         """\((?:official|lyric|lyrics|lyrical|audio|video|visuali[sz]er|full song|hd|4k)[^)]*\)""" +
