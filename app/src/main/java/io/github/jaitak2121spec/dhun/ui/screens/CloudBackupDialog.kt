@@ -3,6 +3,8 @@ package io.github.jaitak2121spec.dhun.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
@@ -11,8 +13,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -70,16 +77,20 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text("The Dhun owner can access data you choose to store. Google credentials, listening history, audio files and local paths are excluded.")
                 Spacer(Modifier.height(12.dp))
-                Text(message)
+                Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (!connected) {
                     Text("Dhun and its account provider store your account ID, name, email and available profile photo. The Dhun owner can access account details to operate the service. Listening history, audio files and local paths are not uploaded. You can export your data or delete your account in Privacy & manage data.")
-                    Checkbox(checked = consent, onCheckedChange = { consent = it }, enabled = !busy,
-                        modifier = Modifier.semantics { contentDescription = "I agree to Dhun account data storage and the privacy notice" })
-                    Text("I agree to the account privacy notice and storing these account details.")
+                    Row(Modifier.fillMaxWidth().toggleable(value = consent, enabled = !busy, role = Role.Checkbox,
+                        onValueChange = { consent = it }), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = consent, onCheckedChange = null, enabled = !busy)
+                        Text("I agree to the account privacy notice and storing these account details.")
+                    }
+                    if (!consent) Text("Accept the privacy notice above to enable Google sign-in.")
                     TextButton(enabled = !busy && consent, onClick = { perform {
-                        val account = nativeGoogleSignIn(context, cloud)
+                        val account = nativeGoogleSignIn(context, cloud) { message = it }
                         message = "Signed in as ${account.optString("name")} · ${account.getString("email")}. Backups remain optional."
-                    } }) { Text("Continue with Google") }
+                    } }) { Text(if (busy) "Signing in…" else "Continue with Google") }
                     TextButton(enabled = !busy, onClick = { perform {
                         val data = cloud.start()
                         message = "Approve code ${data.getString("userCode")} in your browser. Return here after approval."
