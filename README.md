@@ -78,3 +78,11 @@ See [LICENSE](LICENSE) and [third-party credits and source provenance](NOTICE.md
 Dhun home blends chosen artists, language and genres with listening on the device and broader catalogue searches. Android uses qualified listening time from this month's on-device Replay, with known dislikes excluded; desktop uses plays reaching 30 seconds, favourites and early skips. Both cap artist repetition and remove duplicate recordings. This is a discovery heuristic, not a claim to reproduce YouTube Music's home feed or measure global listening popularity.
 
 Music taste controls can disable listening-based seeds. Desktop also offers Reset listening signals. Listening data is not sent to Dhun Cloud; the music source receives the resulting artist/search queries. Google sign-in provides identity, not a YouTube session or imported YouTube listening history. These changes require an updated installer.
+
+### Optional usage dashboard
+
+The owner can sign in at [Dhun Cloud](https://dhun-cloud.vercel.app/) and choose **Load usage dashboard**. It shows daily and 30-day active installations, first-seen and returning installations, versions, and approximate download-page button clicks. Installations are not unique people; users who opt out and older app versions are not counted.
+
+**Share anonymous usage** is off by default in Android settings and desktop **Make it yours**. When enabled it sends a random installation secret, platform and version once per active UTC day, independently of account sign-in. The server stores a keyed hash and retains daily activity for 90 days, with daily scheduled cleanup. No songs, emails, account IDs or precise location are part of activity signals. Turning it off stops reporting and requests deletion; offline requests retry when the app next opens online. Provider recovery backups may retain deleted rows under provider retention policies.
+
+The [download page](https://dhun-cloud.vercel.app/download) includes actual desktop screenshots, a captioned silent walkthrough and installation FAQs. See [search indexing setup](cloud/SEARCH_INDEXING.md) for the remaining Google ownership-verification step.

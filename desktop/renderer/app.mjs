@@ -517,3 +517,11 @@ request('version').then(version => { $('#version').textContent = `DESKTOP PREVIE
 updatePlayer();
 checkForUpdates();
 loadDiscovery();
+
+request('usageStatus').then(data=>{$('#usage-enabled').checked=data.enabled;}).catch(()=>{});
+$('#usage-enabled').addEventListener('change',async event=>{
+  const input=event.target;input.disabled=true;
+  try{const data=await request('usageSet',input.checked);$('#usage-status').textContent=data.pending?'Saved on this device. Will retry the request when Dhun opens online.':data.enabled?'Anonymous usage enabled.':'Usage disabled and stored activity erased.';}
+  catch{input.checked=!input.checked;$('#usage-status').textContent='Could not save your choice. Please try again.';}
+  finally{input.disabled=false;}
+});

@@ -25,7 +25,7 @@ export async function csrfCheck(request) {
   const actual = request.headers.get('x-dhun-csrf') || '';
   if (!expected || expected.length !== actual.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new ApiError(403, 'Refresh this page and try again.');
 }
-export async function jsonBody(request) {
+export async function jsonBody(request, maximum = 2000000) {
   if (!request.headers.get('content-type')?.startsWith('application/json')) throw new ApiError(415, 'Send JSON.');
   const reader = request.body?.getReader();
   let size = 0; const chunks = [];
@@ -33,7 +33,7 @@ export async function jsonBody(request) {
   for (;;) {
     const { value, done } = await reader.read(); if (done) break;
     size += value.byteLength;
-    if (size > 2000000) { await reader.cancel(); throw new ApiError(413, 'Backup is too large.'); }
+    if (size > maximum) { await reader.cancel(); throw new ApiError(413, 'Backup is too large.'); }
     chunks.push(Buffer.from(value));
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new ApiError(400, 'Invalid JSON.'); }

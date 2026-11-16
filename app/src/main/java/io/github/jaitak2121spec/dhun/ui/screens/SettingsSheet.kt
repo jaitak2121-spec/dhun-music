@@ -193,6 +193,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var usageEnabled by remember { mutableStateOf(io.github.jaitak2121spec.dhun.data.UsageAnalytics.enabled(context)) }
     var showCloudBackup by remember { mutableStateOf(false) }
     if (showCloudBackup) CloudBackupDialog(onDismiss = { showCloudBackup = false })
 
@@ -408,6 +409,11 @@ fun SettingsScreen(
             // What the row opens is the scrobbling screen, so the services it
             // signs into are worth typing at this field even though none of
             // them is named on the row itself.
+            row("Anonymous usage", "privacy", "analytics") {
+                SettingsSubRow(title = "Share anonymous usage", checked = usageEnabled,
+                    onCheckedChange = { usageEnabled = it; io.github.jaitak2121spec.dhun.data.UsageAnalytics.setEnabled(context, it) },
+                    subtitle = "Optional. Sends a random installation ID, app version and platform once per active day. No account details or songs. Kept for 90 days. Turning off requests deletion; offline requests retry when Dhun opens online.")
+            }
             row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
                 SettingsRow(
                     icon = Icons.Rounded.Person,

@@ -1,3 +1,4 @@
+import { activity, usageOverview } from '../../../../lib/activity.mjs';
 import { db, asUser } from '../../../../lib/db.mjs';
 import { ApiError, POLICY_VERSION, validateBackup } from '../../../../lib/domain.mjs';
 import { csrfToken, csrfCheck, identity, verifiedIdentity, isOwner, jsonBody, respond, limit, publicOrigin } from '../../../../lib/http.mjs';
@@ -17,6 +18,10 @@ export async function GET(request, context) {
     if (action === 'connect-info') { await verifiedIdentity(); await limit(request,'connection-info',30); return connectionInfo(new URL(request.url).searchParams.get('code')); }
     const user = ['device-backup','device-account'].includes(action) ? await deviceIdentity(request) : await verifiedIdentity(); const sql = db();
     if (action === 'device-account') return { account: { id: user.id, name: user.name, email: user.email } };
+    if (action === 'usage') {
+      if (!isOwner(user)) throw new ApiError(403, 'Owner access is required.');
+      return usageOverview();
+    }
     if (action === 'owner') {
       if (!isOwner(user)) throw new ApiError(403, 'Owner access is required.');
       // Only accounts that explicitly approved a Dhun device or backup appear here.
@@ -33,6 +38,10 @@ export async function POST(request, context) {
     const { action } = await context.params;
     if (action === 'native-google-start' || action === 'native-google-complete') {
       throw new ApiError(503, 'Update Dhun to use secure Google browser sign-in. Your account and music are unchanged.');
+    }
+    if (action === 'activity' || action === 'activity-erase') {
+      await limit(request,'activity',60);
+      return activity(await jsonBody(request,1024),action === 'activity-erase');
     }
     if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name);return{...result,verificationUrl:`${publicOrigin()}/?connect=${result.userCode}`}; }
     if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode); }

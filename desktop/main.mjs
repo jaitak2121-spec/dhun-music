@@ -13,6 +13,8 @@ import { checkDesktopUpdate, installerURL } from './updates.mjs';
 import { cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
 import {searchSuggestions} from './search-suggestions.mjs';
 
+import {usageClient} from './usage.mjs';
+
 const root = path.dirname(fileURLToPath(import.meta.url));
 const player = path.join(app.isPackaged ? process.resourcesPath : path.join(root, 'resources'), 'player', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 const localFiles = new Map();
@@ -85,6 +87,9 @@ try {
   const saved = JSON.parse(await readFile(localStore, 'utf8'));
   if (Array.isArray(saved)) for (const [id, file] of saved) if (typeof id === 'string' && typeof file === 'string') localFiles.set(id, file);
 } catch { /* First launch: no imported files. */ }
+const usage=usageClient({file:path.join(app.getPath('userData'),'usage.json'),platform:process.platform==='win32'?'windows':'mac',version:app.getVersion()});
+handle('usageStatus',usage.status);
+handle('usageSet',usage.set);
 protocol.handle('dhun', serve);
 handle('cloudStatus',cloudStatus);
 handle('cloudAccount',cloudAccount);
@@ -190,6 +195,7 @@ function createWindow() {
     webPreferences: { preload: path.join(root, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
+  window.on('focus',()=>{void usage.foreground();});
   window.once('ready-to-show', () => window.show());
   window.loadURL('dhun://app/index.html');
 }

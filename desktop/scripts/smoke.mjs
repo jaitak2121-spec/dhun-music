@@ -24,6 +24,10 @@ try {
   await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.locator('.brand > span')).toHaveText('Dhun');
   await expect(page.locator('#intro')).toHaveCount(0, { timeout: 5000 });
+  await page.getByRole('button',{name:'Make it yours',exact:true}).click();
+  await expect(page.getByLabel('Share anonymous usage',{exact:true})).not.toBeChecked();
+  await expect(page.getByText('Optional anonymous usage',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close settings',exact:true}).click();
   await expect(page.locator('body')).not.toContainText('Doll Bloom');
   await application.evaluate(({ dialog }, file) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, fixture);
   await page.getByRole('button', { name: 'Add local music' }).click();

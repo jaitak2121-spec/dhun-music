@@ -273,6 +273,11 @@ internal fun shouldSkipAfterDislike(
 
 
 class MainActivity : AppCompatActivity() {
+    override fun onStart() {
+        super.onStart()
+        io.github.jaitak2121spec.dhun.data.UsageAnalytics.foreground(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

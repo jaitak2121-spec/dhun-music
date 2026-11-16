@@ -88,3 +88,22 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dhun.profiles TO dhun_app;
 GRANT SELECT, DELETE ON dhun.devices TO dhun_app;
 REVOKE ALL ON dhun.connections, dhun.rate_limits FROM dhun_app;
 REVOKE ALL ON ALL TABLES IN SCHEMA dhun FROM PUBLIC;
+
+-- Optional, unlinked installation activity. Raw installation secrets are never stored.
+CREATE TABLE IF NOT EXISTS dhun.activity (
+  installation text NOT NULL CHECK (installation ~ '^[a-f0-9]{64}$'),
+  day date NOT NULL DEFAULT (now() AT TIME ZONE 'UTC')::date,
+  platform text NOT NULL CHECK (platform IN ('android','windows','mac')),
+  version text NOT NULL CHECK (length(version) BETWEEN 1 AND 40),
+  PRIMARY KEY (installation,day)
+);
+CREATE INDEX IF NOT EXISTS activity_day ON dhun.activity(day);
+CREATE TABLE IF NOT EXISTS dhun.download_clicks (
+  day date NOT NULL DEFAULT (now() AT TIME ZONE 'UTC')::date,
+  platform text NOT NULL,
+  clicks bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (day,platform)
+);
+ALTER TABLE dhun.activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dhun.download_clicks ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON dhun.activity, dhun.download_clicks FROM PUBLIC, dhun_app;

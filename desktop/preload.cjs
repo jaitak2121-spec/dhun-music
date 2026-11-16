@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('dhun', Object.freeze({
+  usageStatus: () => ipcRenderer.invoke('dhun:usageStatus'),
+  usageSet: value => ipcRenderer.invoke('dhun:usageSet',value),
   search: query => ipcRenderer.invoke('dhun:search', query),
   suggest: query => ipcRenderer.invoke('dhun:suggest',query),
   recommendations: taste => ipcRenderer.invoke('dhun:recommendations', taste),

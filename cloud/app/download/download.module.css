@@ -596,3 +596,5 @@
     }
   }
 }
+
+.showcase,.help{padding:60px 0 30px;scroll-margin-top:24px}.demo{margin:0}.demo video{display:block;width:100%;height:auto;border:1px solid #333;border-radius:18px;background:#111}.showcase figcaption{font-size:12px;line-height:1.7;color:#aaa;margin-top:14px}.screenshots{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:30px}.screenshots figure{margin:0;min-width:0}.screenshots img{width:100%;height:auto;border:1px solid #333;border-radius:12px}.showcase details,.help details{margin-top:0;padding:20px 0;border-top:1px solid #303030}.showcase details{margin-top:28px}.showcase summary,.help summary{font-size:15px;line-height:1.5;cursor:pointer}.showcase li,.help p{font-size:14px;line-height:1.8;color:#b6b6b6}.help p{max-width:800px}.showcase h2,.help h2{scroll-margin-top:20px}@media(max-width:600px){.screenshots{grid-template-columns:1fr}.header nav{gap:12px}.showcase,.help{padding-top:40px}.showcase summary,.help summary{font-size:14px}}
