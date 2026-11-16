@@ -1,6 +1,7 @@
 package io.github.jaitak2121spec.dhun.ui.screens
 
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,8 @@ import io.github.jaitak2121spec.dhun.data.playlistShareText
 import io.github.jaitak2121spec.dhun.data.model.Song
 import io.github.jaitak2121spec.dhun.download.Downloads
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun DevicePlaylistsDialog(songToAdd: Song?, queue: List<Song>, onPlay: (List<Song>, Int) -> Unit, onDismiss: () -> Unit) {
@@ -53,8 +56,15 @@ fun DevicePlaylistsDialog(songToAdd: Song?, queue: List<Song>, onPlay: (List<Son
                 Text("${current.songs.size} songs · $offline available offline")
                 TextButton(enabled = current.songs.isNotEmpty(), onClick = { onPlay(current.songs, 0); onDismiss() }) { Text("Play playlist") }
                 TextButton(enabled = offline > 0, onClick = { scope.launch {
-                    val available = current.songs.mapNotNull { song ->
-                        if (song.localUri != null) song else Downloads.savedUri(context, song.videoId)?.let { song.copy(localUri = it.toString()) }
+                    val available = withContext(Dispatchers.IO) { current.songs.mapNotNull { song ->
+                        if (song.localUri != null) {
+                            val uri = Uri.parse(song.localUri)
+                            val readable = uri.scheme in listOf("file", "content") && runCatching {
+                                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { true } ?: false
+                            }.getOrDefault(false)
+                            song.takeIf { readable }
+                        } else Downloads.savedUri(context, song.videoId)?.let { song.copy(localUri = it.toString()) }
+                    }
                     }
                     if (available.isEmpty()) message = "These downloads are no longer available." else { onPlay(available, 0); onDismiss() }
                 } }) { Text("Play offline") }
