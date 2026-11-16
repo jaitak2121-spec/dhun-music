@@ -3321,6 +3321,14 @@ private fun DhunApp(
                             onNext = { controller?.seekToNextMediaItem() },
                             onPrevious = { controller?.seekToPrevious() },
                             onExpand = { showNowPlaying = true },
+                            onOpenQueue = {
+                                AppSettings.setLastPlayerScreen(io.github.jaitak2121spec.dhun.data.settings.LastPlayerScreen.QUEUE)
+                                showNowPlaying = true
+                            },
+                            onOpenLyrics = {
+                                AppSettings.setLastPlayerScreen(io.github.jaitak2121spec.dhun.data.settings.LastPlayerScreen.LYRICS)
+                                showNowPlaying = true
+                            },
                             controlsLocked = controlsLocked,
                             onBlockedControl = showHostOnlyNotice,
                             modifier = Modifier.fillMaxWidth(),

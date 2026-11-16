@@ -167,6 +167,8 @@ fun MiniPlayer(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    onOpenQueue: (() -> Unit)? = null,
+    onOpenLyrics: (() -> Unit)? = null,
     /** @see io.github.jaitak2121spec.dhun.data.listentogether.ListenTogether.State.controlsLocked */
     controlsLocked: Boolean = false,
     onBlockedControl: () -> Unit = {},
@@ -200,14 +202,14 @@ fun MiniPlayer(
             .clickable(onClick = onExpand)
             .miniPlayerTrackSwipe(
                 onNext = {
-                    haptics.play(Haptic.SkipNext)
-                    onNext()
+                    haptics.play(if (onOpenQueue != null) Haptic.ToggleOn else Haptic.SkipNext)
+                    (onOpenQueue ?: onNext)()
                 },
                 onPrevious = {
-                    haptics.play(Haptic.SkipPrevious)
-                    onPrevious()
+                    haptics.play(if (onOpenLyrics != null) Haptic.ToggleOn else Haptic.SkipPrevious)
+                    (onOpenLyrics ?: onPrevious)()
                 },
-                locked = controlsLocked,
+                locked = controlsLocked && onOpenQueue == null && onOpenLyrics == null,
                 onBlocked = onBlockedControl,
             ),
     ) {
