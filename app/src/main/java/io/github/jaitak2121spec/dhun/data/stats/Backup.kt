@@ -48,7 +48,7 @@ object Backup {
 
     /** A suggested filename, dated so successive exports don't collide. */
     fun suggestedName(): String =
-        "dollbloom-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
+        "Dhun-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
             Instant.now().atZone(ZoneId.systemDefault()),
         )}.json"
 

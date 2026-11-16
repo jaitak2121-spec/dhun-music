@@ -46,6 +46,19 @@ jobs:
         run: bash ./gradlew --no-daemon --max-workers=2 assembleDevDebug -PappVersionCode="$((1000 + GITHUB_RUN_NUMBER))" -PappVersionName="1.7.1-preview.${GITHUB_RUN_NUMBER}" --stacktrace
       - name: Run Android unit tests
         run: bash ./gradlew --no-daemon --max-workers=2 testDevDebugUnitTest -PappVersionCode="$((1000 + GITHUB_RUN_NUMBER))" -PappVersionName="1.7.1-preview.${GITHUB_RUN_NUMBER}" --stacktrace
+      - name: Verify the shipped APK app name in every locale
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          "$SDK_ROOT/build-tools/36.0.0/aapt2" dump badging app/build/outputs/apk/dev/debug/app-dev-universal-debug.apk > /tmp/dhun-apk-badging.txt
+          python3 - <<'PY'
+          import pathlib, re
+          labels = re.findall(r"^application-label(?:-[^:]+)?:'([^']*)'$", pathlib.Path('/tmp/dhun-apk-badging.txt').read_text(), re.MULTILINE)
+          assert labels, 'APK has no application labels'
+          assert all(label == 'Dhun' for label in labels), f'Unexpected APK labels: {labels}'
+          print(f'Verified Dhun app labels for {len(labels)} APK locales.')
+          PY
       - name: Save the installable universal debug APK
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v4

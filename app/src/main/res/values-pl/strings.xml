@@ -109,10 +109,10 @@
     <string name="dolby_atmos_open_failed">Nie można było otworzyć ustawień Dolby Atmos</string>
     <string name="update_available">Dostępna aktualizacja: v%1$s</string>
     <string name="software_update">Aktualizacja oprogramowania</string>
-    <string name="update_available_body">dollbloom %1$s jest dostępny do pobrania.</string>
-    <string name="update_downloading_body">Pobieranie dollbloom %1$s…</string>
-    <string name="update_ready_body">dollbloom %1$s jest gotowy do zainstalowania.</string>
-    <string name="update_failed_body">Nie udało się pobrać dollbloom %1$s.</string>
+    <string name="update_available_body">Dhun %1$s jest dostępny do pobrania.</string>
+    <string name="update_downloading_body">Pobieranie Dhun %1$s…</string>
+    <string name="update_ready_body">Dhun %1$s jest gotowy do zainstalowania.</string>
+    <string name="update_failed_body">Nie udało się pobrać Dhun %1$s.</string>
     <string name="download_now">Pobierz teraz</string>
     <string name="install_now">Zainstaluj teraz</string>
     <string name="later">Później</string>

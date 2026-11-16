@@ -22,6 +22,7 @@ try {
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));
   await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
+  await expect(page.locator('.brand > span')).toHaveText('Dhun');
   await expect(page.locator('#intro')).toHaveCount(0, { timeout: 5000 });
   await expect(page.locator('body')).not.toContainText('Doll Bloom');
   await application.evaluate(({ dialog }, file) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, fixture);

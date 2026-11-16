@@ -11,6 +11,18 @@ ANDROID = "{http://schemas.android.com/apk/res/android}"
 
 
 class DhunIdentityTest(unittest.TestCase):
+    def test_shipping_flavors_and_update_messages_use_the_dhun_name(self):
+        for source in (ROOT / "app/src").glob("*/AndroidManifest.xml"):
+            app = ET.parse(source).getroot().find("application")
+            if app is not None and app.get(ANDROID + "label") is not None:
+                self.assertEqual("@string/app_name", app.get(ANDROID + "label"), str(source))
+        for source in (ROOT / "app/src/main/res").glob("values*/strings.xml"):
+            strings = {node.get("name"): "".join(node.itertext()) for node in ET.parse(source).getroot() if node.tag == "string"}
+            self.assertEqual("Dhun", strings["app_name"], str(source))
+            for key in ("update_available_body", "update_downloading_body", "update_ready_body", "update_failed_body"):
+                self.assertIn("Dhun", strings[key], f"{source}: {key}")
+                self.assertNotRegex(strings[key], r"(?i)doll.?bloom", f"{source}: {key}")
+
     def test_manifest_classes_and_launcher_resolve(self):
         manifest = ET.parse(ROOT / "app/src/main/AndroidManifest.xml").getroot()
         app = manifest.find("application")

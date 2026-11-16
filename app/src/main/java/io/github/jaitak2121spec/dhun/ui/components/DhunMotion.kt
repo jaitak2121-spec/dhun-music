@@ -131,7 +131,7 @@ internal fun DhunLaunchIntro(showOnLaunch: Boolean) {
                     },
                 )
             }
-            Text("dhun", style = MaterialTheme.typography.displayLarge, color = foreground,
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayLarge, color = foreground,
                 modifier = Modifier.graphicsLayer {
                     val reveal = FastOutSlowInEasing.transform(((progress.value - 0.30f) / 0.25f).coerceIn(0f, 1f))
                     alpha = reveal

@@ -319,7 +319,7 @@ fun FrostedTopBar(
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(30.dp),
                     )
-                    Text("dhun", style = MaterialTheme.typography.titleLarge,
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 6.dp))
@@ -383,7 +383,7 @@ private fun FloatingAppMark(
                 modifier = Modifier.size(20.dp),
             )
         }
-        Text("dhun", style = MaterialTheme.typography.titleLarge,
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
             color = contentColor, modifier = Modifier.padding(start = 8.dp))
     }
 }
