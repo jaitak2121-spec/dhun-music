@@ -10,6 +10,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts
+import io.github.jaitak2121spec.dhun.data.cloud.nativeGoogleSignIn
 import io.github.jaitak2121spec.dhun.data.settings.AppSettings
 import io.github.jaitak2121spec.dhun.data.settings.ColorTheme
 import io.github.jaitak2121spec.dhun.data.settings.ThemeMode
@@ -36,6 +41,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var connected by remember { mutableStateOf(cloud.connected) }
     var busy by remember { mutableStateOf(false) }
+    var consent by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("Backups are optional and manual. Nothing uploads automatically.") }
     var pendingUpload by remember { mutableStateOf<JSONObject?>(null) }
     var pendingRestore by remember { mutableStateOf<JSONObject?>(null) }
@@ -43,6 +49,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         scope.launch {
             busy = true
             try { action(); connected = cloud.connected }
+            catch (_: GetCredentialCancellationException) { message = "Sign-in cancelled. Your music stays on this device." }
             catch (error: CancellationException) { throw error }
             catch (error: Exception) { message = error.message ?: "Cloud request failed. Your local data is safe." }
             finally { busy = false }
@@ -59,12 +66,20 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         title = { Text("Your Dhun account") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Sign in once with Google in your browser to create your Dhun account. Recommendations use listening on this device, without a YouTube Music login. YouTube Music connection remains optional for its library features. Back up your appearance settings. Android keeps online favourites already stored in your cloud backup, but does not upload YouTube likes or change your YouTube library. Desktop can back up and restore online favourites.")
+                Text("Sign in using Google's secure account chooser inside Dhun. Recommendations learn on this device. YouTube Music is a separately optional connection for its library features, and backups stay off until you enable them.")
                 Spacer(Modifier.height(12.dp))
                 Text("The Dhun owner can access data you choose to store. Google credentials, listening history, audio files and local paths are excluded.")
                 Spacer(Modifier.height(12.dp))
                 Text(message)
                 if (!connected) {
+                    Text("Dhun and its account provider store your account ID, name, email and available profile photo. The Dhun owner can access account details to operate the service. Listening history, audio files and local paths are not uploaded. You can export your data or delete your account in Privacy & manage data.")
+                    Checkbox(checked = consent, onCheckedChange = { consent = it }, enabled = !busy,
+                        modifier = Modifier.semantics { contentDescription = "I agree to Dhun account data storage and the privacy notice" })
+                    Text("I agree to the account privacy notice and storing these account details.")
+                    TextButton(enabled = !busy && consent, onClick = { perform {
+                        val account = nativeGoogleSignIn(context, cloud)
+                        message = "Signed in as ${account.optString("name")} · ${account.getString("email")}. Backups remain optional."
+                    } }) { Text("Continue with Google") }
                     TextButton(enabled = !busy, onClick = { perform {
                         val data = cloud.start()
                         message = "Approve code ${data.getString("userCode")} in your browser. Return here after approval."
@@ -73,7 +88,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         repeat(100) { if (!approved) { delay(3000); approved = cloud.poll() } }
                         check(approved) { "Connection expired. Try again." }
                         message = "Signed in to Dhun. Your recommendations learn on this device. Backups are separately optional."
-                    } }) { Text("Sign in to Dhun") }
+                    } }) { Text("Use browser sign-in instead") }
                 } else {
                     TextButton(enabled = !busy, onClick = { perform {
                         val profile = cloud.backup().optJSONObject("profile")?.takeIf { !it.isNull("backup_consented_at") } ?: error("Enable optional backups in Privacy & manage data first.")

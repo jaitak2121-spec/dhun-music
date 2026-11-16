@@ -1,13 +1,15 @@
 import { db, asUser } from '../../../../lib/db.mjs';
-import { ApiError, POLICY_VERSION, validateBackup } from '../../../../lib/domain.mjs';
+import { ApiError, POLICY_VERSION, validateBackup, googleNativeConfig } from '../../../../lib/domain.mjs';
 import { csrfToken, csrfCheck, identity, verifiedIdentity, isOwner, jsonBody, respond, limit, publicOrigin } from '../../../../lib/http.mjs';
 import { auth } from '../../../../lib/auth.mjs';
 import { deviceIdentity, startConnection, pollConnection, connectionInfo, approveConnection } from '../../../../lib/devices.mjs';
+import { startNativeGoogle, completeNativeGoogle } from '../../../../lib/native-google.mjs';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request, context) {
   return respond(async () => {
     const { action } = await context.params;
+    if (action === 'native-google-config') return googleNativeConfig();
     if (action === 'session') {
       const csrf = await csrfToken();
       try { const user = await identity(); return { csrf, user: { name: user.name, email: user.email, verified: user.emailVerified, owner: isOwner(user) } }; }
@@ -30,6 +32,10 @@ export async function GET(request, context) {
 export async function POST(request, context) {
   return respond(async () => {
     const { action } = await context.params;
+    if (action === 'native-google-start' || action === 'native-google-complete') {
+      await limit(request, 'native-google', 20);
+      return action === 'native-google-start' ? startNativeGoogle() : completeNativeGoogle(await jsonBody(request));
+    }
     if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name);return{...result,verificationUrl:`${publicOrigin()}/?connect=${result.userCode}`}; }
     if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode); }
     const native = ['device-backup','device-disconnect'].includes(action);

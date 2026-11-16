@@ -12,6 +12,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.security.KeyStore
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -60,6 +61,7 @@ class CloudAccounts(context: Context) {
     }
     private fun request(action: String, body: JSONObject? = null, authenticated: Boolean = true): JSONObject {
         val builder = Request.Builder().url("$URL/api/cloud/$action")
+        if (action.startsWith("native-google-")) builder.header("Origin", URL)
         if (authenticated) builder.header("Authorization", "Bearer ${token()}")
         if (body != null) builder.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(builder.build()).execute().use { response ->
@@ -79,6 +81,22 @@ class CloudAccounts(context: Context) {
         check(Regex("^[A-F0-9]{8}$").matches(code) && data.getString("verificationUrl") == "$URL/?connect=$code") { "Invalid connection response." }
         pendingCode = data.getString("deviceCode")
         data
+    }
+    suspend fun startNativeGoogle(): JSONObject = withContext(Dispatchers.IO) {
+        check(!connected) { "Disconnect the existing Dhun account first." }
+        key(true)
+        val data = request("native-google-start", JSONObject(), false)
+        val challenge = data.getString("challenge")
+        val expectedNonce = MessageDigest.getInstance("SHA-256").digest(challenge.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        check(Regex("^[A-Za-z0-9_-]{43}$").matches(challenge) && data.getString("nonce") == expectedNonce &&
+            Regex("^[0-9]+-[A-Za-z0-9_-]+\\.apps\\.googleusercontent\\.com$").matches(data.getString("serverClientId"))) { "Invalid Google sign-in configuration." }
+        data
+    }
+    suspend fun completeNativeGoogle(challenge: String, idToken: String): JSONObject = withContext(Dispatchers.IO) {
+        val data = request("native-google-complete", JSONObject().put("challenge", challenge).put("idToken", idToken)
+            .put("agree", true).put("policyVersion", "2026-11-16"), false)
+        saveToken(data.getString("token"))
+        data.getJSONObject("account")
     }
     suspend fun poll(): Boolean = withContext(Dispatchers.IO) {
         val data = request("connect-poll", JSONObject().put("deviceCode", pendingCode ?: error("Start a connection first.")), false)
