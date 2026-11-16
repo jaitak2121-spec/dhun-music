@@ -403,7 +403,7 @@ fun SettingsScreen(
         SearchableSettingsGroup(search) {
             val accountTitle = stringResource(R.string.account_integrations)
             row("Dhun Cloud", "backup", "privacy", "account") {
-                SettingsRow(icon = Icons.Rounded.Person, title = "Dhun Cloud · optional", subtitle = "Back up appearance settings · manage your data", onClick = { showCloudBackup = true })
+                SettingsRow(icon = Icons.Rounded.Person, title = "Your Dhun account", subtitle = "Sign in · optional backups · manage your data", onClick = { showCloudBackup = true })
             }
             // What the row opens is the scrobbling screen, so the services it
             // signs into are worth typing at this field even though none of
@@ -411,7 +411,7 @@ fun SettingsScreen(
             row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
                 SettingsRow(
                     icon = Icons.Rounded.Person,
-                    title = accountTitle,
+                    title = "Optional music connections",
                     subtitle = account?.email?.takeIf { it.isNotBlank() }
                         ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
                     onClick = onAccountScrobbling,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateBackup, randomToken, validToken, tokenHash } from '../lib/domain.mjs';
+import { validateBackup, validateGoogleLogin, randomToken, validToken, tokenHash } from '../lib/domain.mjs';
 const backup = () => ({ revision: 0, favourites: [{ videoId: 'dQw4w9WgXcQ', title: 'A song', artist: 'An artist', durationSeconds: 210 }], preferences: { theme: 'monochrome', appearance: 'dark', reduceMotion: false } });
 test('backup whitelist excludes credentials and local paths at every level', () => {
   for (const key of ['password','cookie','localPath','streamUrl','userId']) {
@@ -17,4 +17,11 @@ test('rejects duplicate songs, unbounded numbers and invalid revisions', () => {
 });
 test('device secrets are random, full length, and hash before storage',()=>{
   const a=randomToken(),b=randomToken();assert.ok(validToken(a));assert.notEqual(a,b);assert.notEqual(tokenHash(a),a);assert.equal(tokenHash(a).length,64);
+});
+
+test('Google login requires consent and an exact local return target',()=>{
+  const origin='https://dhun-cloud.vercel.app';
+  const valid={provider:'google',dhunConsent:true,callbackURL:origin+'/?connect=A1B2C3D4'};
+  assert.doesNotThrow(()=>validateGoogleLogin(valid,origin));
+  for(const change of [{errorCallbackURL:'https://attacker.example'},{provider:'github'},{dhunConsent:false},{callbackURL:'https://attacker.example/'},{callbackURL:origin+'/download'},{callbackURL:origin+'/?connect=bad'},{callbackURL:origin+'/?next=https://attacker.example'},{callbackURL:origin+'/?connect=A1B2C3D4&connect=00000000'}]) assert.throws(()=>validateGoogleLogin({...valid,...change},origin));
 });

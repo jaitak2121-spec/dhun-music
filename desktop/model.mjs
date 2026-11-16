@@ -42,3 +42,22 @@ export function diverseTracks(batches, excluded = [], limit = 12) {
   }
   return result;
 }
+
+/** Local-only artist seeds. Brief plays do not vote; early skips reduce a vote. */
+export function listeningTaste(taste, signals = [], favourites = []) {
+  discoveryQueries(taste);
+  const scores = new Map();
+  const add = (artist, score) => {
+    if (typeof artist !== 'string' || !artist.trim() || artist === 'Unknown' || !Number.isFinite(score)) return;
+    const key = artist.trim().slice(0, 50); scores.set(key, (scores.get(key) || 0) + score);
+  };
+  for (const entry of (Array.isArray(signals) ? signals : []).slice(0,200)) {
+    if (!entry || !validId(entry.id)) continue;
+    add(entry.artist, Math.min(20, Math.max(0, Number(entry.plays)||0)) - Math.min(20,Math.max(0,Number(entry.skips)||0)));
+  }
+  for (const track of favourites.slice(0,1000)) if (track && !track.local && validId(track.id)) add(track.artist, 3);
+  const learned = [...scores].filter(([,score])=>score>0).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([artist])=>artist);
+  const explicit = taste.artists.split(',').map(a=>a.trim()).filter(Boolean);
+  const artists = learned.length ? [...explicit.slice(0,1),...learned] : explicit;
+  return {...taste,artists:[...new Set(artists)].slice(0,3).join(', ').slice(0,160)};
+}

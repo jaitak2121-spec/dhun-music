@@ -25,7 +25,7 @@
         <button data-view="local"><i data-icon="folder"></i>On this device</button>
         <button data-view="queue"><i data-icon="queue"></i>Play queue <span id="queue-count">0</span></button>
       </nav>
-      <div class="sidebar-bottom"><button id="settings-open"><i data-icon="settings"></i>Make it yours</button><p id="version">Dhun desktop preview</p></div>
+      <div class="sidebar-bottom"><button id="account-open">Your Dhun account</button><button id="settings-open"><i data-icon="settings"></i>Make it yours</button><p id="version">Dhun desktop preview</p></div>
     </aside>
     <main>
       <header class="topbar"><span class="desktop-label">A LITTLE MORE YOU.</span><form id="search-form" role="search"><label class="sr-only" for="query">Search music</label><i data-icon="search"></i><input id="query" type="search" maxlength="160" placeholder="Songs, artists, a feeling…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions" required><button type="submit">Search</button><div id="search-completions" hidden><p id="suggestion-label">Search suggestions</p><ul id="search-suggestions" role="listbox" aria-labelledby="suggestion-label"></ul><button id="clear-search-history" type="button" hidden>Clear recent searches</button><small>Live suggestions use Google/YouTube. Recent searches stay on this device.</small></div></form></header>
@@ -68,7 +68,7 @@
     <fieldset><legend>Colour palette</legend><div class="theme-options"><button data-theme="monochrome" aria-pressed="true">Monochrome</button><button data-theme="indigo" aria-pressed="false">Indigo</button><button data-theme="forest" aria-pressed="false">Forest</button></div></fieldset>
     <div class="setting-row"><label for="appearance">Appearance</label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option><option value="system">Follow system</option></select></div>
     <label class="setting-row" for="reduce-motion">Reduce animation<input type="checkbox" id="reduce-motion"></label>
-    <fieldset><legend>Dhun Cloud · optional</legend><p>Back up online favourites and appearance settings only when you choose. The Dhun owner can access your stored cloud data. Local files and listening history are excluded.</p><p id="cloud-status" role="status">Not connected. Your library stays on this device.</p><button id="cloud-connect" class="subtle">Connect account</button><button id="cloud-upload" class="subtle" hidden>Upload backup</button><button id="cloud-restore" class="subtle" hidden>Restore backup</button><button id="cloud-disconnect" class="subtle" hidden>Disconnect</button><button id="cloud-manage" class="subtle">Privacy &amp; manage data</button></fieldset>
+    <fieldset><legend>Your Dhun account</legend><p>Back up online favourites and appearance settings only when you choose. The Dhun owner can access your stored cloud data. Local files and listening history are excluded.</p><p id="cloud-status" role="status">Not connected. Your library stays on this device.</p><button id="cloud-connect" class="subtle">Sign in with Google</button><button id="cloud-upload" class="subtle" hidden>Upload backup</button><button id="cloud-restore" class="subtle" hidden>Restore backup</button><button id="cloud-disconnect" class="subtle" hidden>Disconnect</button><button id="cloud-manage" class="subtle">Privacy &amp; manage data</button></fieldset>
     <div class="about"><strong>Dhun desktop preview</strong>
       <p>Your music. Your rhythm. Optional Dhun Cloud backs up favourites and appearance. YouTube account sign-in, offline YouTube downloads, and Automix are not included in this desktop preview.</p>
       <button id="check-updates" class="subtle">Check for updates</button><p id="update-status" role="status"></p>
@@ -79,6 +79,7 @@
   </dialog>
   <dialog id="discovery-dialog" aria-labelledby="discovery-dialog-title">
     <h2 id="discovery-dialog-title">Find your kind of music</h2><p>Choose what you want to hear. Any field can be left blank. These choices guide searches; they are not strict language filters.</p>
+<label class="setting-row" for="discovery-learning">Learn from listening on this device<input type="checkbox" id="discovery-learning" checked></label><p>Qualified plays, favourites and early skips guide discovery. Artist searches go to the music source; listening signals are not uploaded to Dhun Cloud.</p><button id="discovery-clear-learning" class="subtle" type="button">Reset listening signals</button>
     <form id="discovery-form" action="#" method="dialog" aria-labelledby="discovery-dialog-title">
       <label for="discovery-language">Music language</label><input id="discovery-language" name="language" maxlength="40" placeholder="English, Hindi, Punjabi…" autofocus>
       <label for="discovery-artists">Up to 3 artists, separated by commas</label><input id="discovery-artists" name="artists" maxlength="160" placeholder="Your favourite artists">

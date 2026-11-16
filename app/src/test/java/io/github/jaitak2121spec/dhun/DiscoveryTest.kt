@@ -10,6 +10,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DiscoveryTest {
+    @Test fun `personal queries keep cold start discovery and blend bounded learned seeds`() {
+        assertEquals(listOf("new music discoveries"), io.github.jaitak2121spec.dhun.data.personalDiscoveryQueries(DiscoveryTaste(), emptyList()))
+        val queries = io.github.jaitak2121spec.dhun.data.personalDiscoveryQueries(DiscoveryTaste("Hindi", "Chosen", "acoustic"), listOf("Replayed", "replayed", "New artist", "Overflow"))
+        assertEquals(4, queries.size)
+        assertTrue(queries.any { it.startsWith("Replayed ") })
+        assertTrue(queries.last().contains("new music discoveries"))
+        assertTrue(queries.none { it.contains("Overflow") })
+    }
+
     private fun song(id: Int, title: String = "Song $id", artist: String = "Artist $id") = Song(id.toString().padStart(11, '0'), title, artist, null)
 
     @Test fun `empty tastes make no searches and explicit queries are bounded and unique`() {

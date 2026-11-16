@@ -23,9 +23,9 @@ Desktop installers are unsigned development previews, so Windows or macOS may wa
 
 Current previews use a consistent, development-only signing identity. If Android refuses to update an older preview, back up your settings and downloads before uninstalling it once. See [preview signing](signing/DHUN_DEVELOPMENT.md). Future previews with this identity can install as updates.
 
-## Optional Dhun Cloud
+## Your Dhun account
 
-New previews include an optional account connection under Settings → Dhun Cloud. Users sign in through the browser, verify their email, review the privacy notice and explicitly approve their device. Connecting never starts an automatic upload.
+New previews make Dhun accounts the main sign-in path. Continue with Google in the browser, then approve the app device code; email remains available for existing accounts. The YouTube Music connection is separately optional for YouTube library features. Users review the account privacy notice and explicitly approve their device. Account connection does not enable backups or start an automatic upload. The owner dashboard lists consenting accounts with their Dhun ID, name and email.
 
 Desktop can manually back up online favourites and appearance settings, and merge a restored backup while keeping local music. Android can upload and restore appearance settings while preserving favourites already in the cloud; it does not upload or modify YouTube likes. Listening history, Google credentials, YouTube cookies, audio files and local file paths are excluded. Device access is encrypted locally and expires after 30 days.
 
@@ -72,3 +72,9 @@ The Genius live-service test is opt-in because it depends on an external website
 ## License
 
 See [LICENSE](LICENSE) and [third-party credits and source provenance](NOTICE.md). Existing copyright and license headers remain in their source files.
+
+## Personal recommendations
+
+Dhun home blends chosen artists, language and genres with listening on the device and broader catalogue searches. Android uses qualified listening time from this month's on-device Replay, with known dislikes excluded; desktop uses plays reaching 30 seconds, favourites and early skips. Both cap artist repetition and remove duplicate recordings. This is a discovery heuristic, not a claim to reproduce YouTube Music's home feed or measure global listening popularity.
+
+Music taste controls can disable listening-based seeds. Desktop also offers Reset listening signals. Listening data is not sent to Dhun Cloud; the music source receives the resulting artist/search queries. Google sign-in provides identity, not a YouTube session or imported YouTube listening history. These changes require an updated installer.

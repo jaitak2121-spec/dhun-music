@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { nextIndex,discoveryQueries,diverseTracks } from './model.mjs';
+import { nextIndex,discoveryQueries,diverseTracks,listeningTaste } from './model.mjs';
 import {mergeSuggestions} from './search-suggestions.mjs';
 const $ = selector => document.querySelector(selector);
 const icons = {
@@ -109,6 +109,19 @@ $('#search-form').addEventListener('focusout',event=>{if(!event.currentTarget.co
 $('#clear-search-history').addEventListener('click',()=>{if(!save('search-history',[]))return;recentSearches=[];queryInput.focus();queueCompletions();});
 let discoveryTaste=read('discovery-taste',{language:'',artists:'',genres:''});
 try{discoveryQueries(discoveryTaste);}catch{discoveryTaste={language:'',artists:'',genres:''};}
+let listeningSignals=read('listening-signals',[]);
+if(!Array.isArray(listeningSignals))listeningSignals=[];
+let useListening=read('learn-from-listening',true)!==false;
+let listenedMs=0,listeningTick=performance.now(),listeningCounted=false,listeningTrack=null;
+function recordListening(skipped=false){
+  const track=listeningTrack;if(!useListening||!track||track.local||listeningCounted)return;
+  if(!skipped&&listenedMs<30000)return;
+  if(skipped&&(listenedMs<1000||listenedMs>=15000))return;
+  const previous=listeningSignals.find(s=>s.id===track.id)||{plays:0,skips:0};
+  const entry={id:track.id,artist:track.artist,plays:Math.min(20,(Number(previous.plays)||0)+(skipped?0:1)),skips:Math.min(20,(Number(previous.skips)||0)+(skipped?1:0))};
+  listeningSignals=[entry,...listeningSignals.filter(s=>s.id!==track.id)].slice(0,200);
+  save('listening-signals',listeningSignals);listeningCounted=true;
+}
 let discoveryResults=[],discoveryGeneration=0;
 let hiddenSuggestions=read('hidden-suggestions',[]);
 if(!Array.isArray(hiddenSuggestions))hiddenSuggestions=[];
@@ -132,22 +145,22 @@ function renderDiscovery(){
 }
 async function loadDiscovery(){
   const generation=++discoveryGeneration,configured=discoveryQueries(discoveryTaste).length>0;
-  $('#discovery-refresh').hidden=!configured;$('#discovery-edit').textContent=configured?'Fine-tune your music taste':'Choose your music taste';
+  $('#discovery-refresh').hidden=false;$('#discovery-edit').textContent=configured?'Fine-tune your music taste':'Choose your music taste';
   discoveryResults=[];renderDiscovery();
-  $('#discovery-loading').hidden=!configured;
-  $('#discovery-refresh').disabled=configured;
-  if(!configured){$('#discovery-status').textContent='Choose artists, genres and a language to discover music you want to hear.';return;}
+  $('#discovery-loading').hidden=false;
+  $('#discovery-refresh').disabled=true;
   $('#discovery-status').textContent='Finding music based on your choices…';
   try{
-    const tracks=await request('recommendations',discoveryTaste);
+    const tracks=await request('recommendations',useListening?listeningTaste(discoveryTaste,listeningSignals,state.favourites):discoveryTaste);
     if(generation!==discoveryGeneration)return;
     discoveryResults=diverseTracks([tracks],hiddenSuggestions);renderDiscovery();
-    $('#discovery-status').textContent=discoveryResults.length?'Based on your chosen artists, genres and language. Hide a suggestion with the minus button.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
+    $('#discovery-status').textContent=discoveryResults.length?'Your music taste and qualified listening, blended with broader discoveries. Listening signals stay on this device.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
   }catch(error){if(generation===discoveryGeneration)$('#discovery-status').textContent=`Recommendations unavailable: ${error.message} Your music library is unchanged.`;}
   finally{if(generation===discoveryGeneration){$('#discovery-loading').hidden=true;$('#discovery-refresh').disabled=false;}}
 }
 $('#discovery-edit').addEventListener('click',()=>{
   for(const key of ['language','artists','genres'])$(`#discovery-${key}`).value=discoveryTaste[key];
+  $('#discovery-learning').checked=useListening;
   $('#discovery-dialog').showModal();
 });
 $('#discovery-cancel').addEventListener('click',()=>$('#discovery-dialog').close());
@@ -155,6 +168,7 @@ $('#discovery-form').addEventListener('submit',event=>{
   event.preventDefault();if(event.isComposing)return;
   const data=new FormData(event.currentTarget),taste=Object.fromEntries(['language','artists','genres'].map(key=>[key,String(data.get(key)||'').trim()]));
   if(!save('discovery-taste',taste))return;
+  useListening=$('#discovery-learning').checked;save('learn-from-listening',useListening);listenedMs=0;listeningTick=performance.now();
   discoveryTaste=taste;$('#discovery-dialog').close();loadDiscovery();
 });
 $('#discovery-reset').addEventListener('click',()=>{
@@ -163,6 +177,7 @@ $('#discovery-reset').addEventListener('click',()=>{
   discoveryTaste=empty;hiddenSuggestions=[];$('#discovery-dialog').close();loadDiscovery();
 });
 $('#discovery-refresh').addEventListener('click',loadDiscovery);
+$('#discovery-clear-learning').addEventListener('click',()=>{if(save('listening-signals',[])){listeningSignals=[];$('#discovery-status').textContent='Recommendation learning reset on this device.';loadDiscovery();}});
 function time(value) { if (!Number.isFinite(value) || value < 0) return '0:00'; return `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`; }
 function current() { return state.queue[state.index]; }
 function isFavourite(track) { return state.favourites.some(item => item.id === track?.id); }
@@ -273,6 +288,7 @@ function updatePlayer() {
 }
 async function playAt(index) {
   const track = state.queue[index]; if (!track) return;
+  recordListening(true);listenedMs=0;listeningTick=performance.now();listeningCounted=false;listeningTrack=null;
   const generation = ++state.generation;
   audio.pause(); audio.removeAttribute('src'); audio.load(); state.index = index; state.resolving = true; status(); updatePlayer(); renderTracks();
   resetLyrics(); if (state.view === 'lyrics') loadLyrics();
@@ -281,6 +297,7 @@ async function playAt(index) {
     if (generation !== state.generation) return;
     audio.src = source; await audio.play();
     if (generation !== state.generation) return;
+    listeningTrack=track;listeningTick=performance.now();
     state.recent = [track, ...state.recent.filter(item => item.id !== track.id)].slice(0, 100);
     save('recent', state.recent);
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: track.title, artist: track.artist });
@@ -406,22 +423,24 @@ audio.addEventListener('loadedmetadata', () => { const finite = Number.isFinite(
 audio.addEventListener('emptied', () => { $('#seek').disabled = true; $('#seek').value = '0'; $('#elapsed').textContent = '0:00'; $('#duration').textContent = '0:00'; });
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => { state.playing = !audio.paused && !audio.ended; updatePlayer(); if ('mediaSession' in navigator) navigator.mediaSession.playbackState = state.playing ? 'playing' : 'paused'; });
 audio.addEventListener('ended', safe(() => advance(1, true)));
+audio.addEventListener('timeupdate',()=>{const now=performance.now(),delta=now-listeningTick;listeningTick=now;if(!audio.paused&&!audio.seeking&&delta>0&&delta<3000){listenedMs+=delta;recordListening();}});
 audio.addEventListener('error', () => { if (audio.getAttribute('src')) status(current()?.local ? 'This file is unavailable or its format is unsupported. Add it again from your device.' : 'This stream could not play. Try the song again or choose another result.'); });
 document.addEventListener('keydown', safe(async event => { if (event.code !== 'Space' || event.target.closest('input,select,textarea,button,dialog')) return; event.preventDefault(); await togglePlayback(); }));
 if ('mediaSession' in navigator) for (const [action, handler] of Object.entries({ play: safe(() => audio.play()), pause: () => audio.pause(), previoustrack: safe(() => advance(-1)), nexttrack: safe(() => advance(1)), seekto: details => { if (Number.isFinite(audio.duration)) audio.currentTime = details.seekTime; } })) navigator.mediaSession.setActionHandler(action, handler);
-$('#settings-open').addEventListener('click', () => { $('#settings').showModal(); cloudAction(async()=>{const result=await request('cloudStatus');cloudConnected(result.connected);}); }); $('#settings-close').addEventListener('click', () => $('#settings').close());
+$('#account-open').addEventListener('click',()=>$('#settings-open').click());
+$('#settings-open').addEventListener('click', () => { $('#settings').showModal(); cloudAction(async()=>{const result=await request('cloudStatus');cloudConnected(result.connected);if(result.connected){const data=await request('cloudAccount');$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;}}); }); $('#settings-close').addEventListener('click', () => $('#settings').close());
 document.querySelectorAll('button[data-theme]').forEach(button => button.addEventListener('click', () => { theme = button.dataset.theme; applyTheme(); }));
 $('#appearance').addEventListener('change', event => { appearance = event.target.value; applyTheme(); }); $('#reduce-motion').addEventListener('change', () => { applyTheme(); if ($('#reduce-motion').checked) dismissIntro(); });
 $('#releases').addEventListener('click', safe(() => request('releases')));
 function cloudConnected(connected) {
   $('#cloud-connect').hidden=connected;
   for(const id of ['cloud-upload','cloud-restore','cloud-disconnect'])$(`#${id}`).hidden=!connected;
-  $('#cloud-status').textContent=connected?'Connected. Backups are manual; nothing uploads automatically.':'Not connected. Your library stays on this device.';
+  $('#cloud-status').textContent=connected?'Signed in to Dhun. Listening stays on this device. Backups are separately optional.':'Sign in to Dhun with Google. Your library and listening stay on this device.';
 }
 async function cloudAction(action) {
   const buttons=['cloud-connect','cloud-upload','cloud-restore','cloud-disconnect','cloud-manage'].map(id=>$(`#${id}`));
   buttons.forEach(button=>button.disabled=true);
-  try{await action();}catch(error){$('#cloud-status').textContent=error.message || 'Cloud request failed. Your local library is safe.';}
+  try{await action();}catch(error){const connection=await request('cloudStatus').catch(()=>null);if(connection&&!connection.connected)cloudConnected(false);$('#cloud-status').textContent=error.message || 'Cloud request failed. Your local library is safe.';}
   finally{buttons.forEach(button=>button.disabled=false);}
 }
 $('#cloud-connect').addEventListener('click',()=>cloudAction(async()=>{
@@ -431,13 +450,13 @@ $('#cloud-connect').addEventListener('click',()=>cloudAction(async()=>{
     await new Promise(resolve=>setTimeout(resolve,3000));
     if(!$('#settings').open)return;
     const connection=await request('cloudPoll');
-    if(connection.connected){cloudConnected(true);return;}
+    if(connection.connected){cloudConnected(true);const data=await request('cloudAccount');$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;return;}
   }
   throw Error('Connection expired. Please connect again.');
 }));
 $('#cloud-upload').addEventListener('click',()=>cloudAction(async()=>{
   const data=await request('cloudBackup');
-  if(!data.profile)throw Error('Enable your cloud backup in Privacy & manage data first.');
+  if(!data.profile?.backup_consented_at)throw Error('Enable optional backups in Privacy & manage data first.');
   const favourites=state.favourites.filter(track=>!track.local&&/^[A-Za-z0-9_-]{11}$/.test(track.id)).map(track=>({videoId:track.id,title:track.title.slice(0,300),artist:track.artist.slice(0,200),durationSeconds:Number.isFinite(track.duration)?Math.min(86400,Math.max(0,track.duration)):0}));
   const result=await request('cloudUpload',{revision:data.profile.revision,favourites,preferences:{theme,appearance,reduceMotion:$('#reduce-motion').checked}});
   if(!result.cancelled)$('#cloud-status').textContent=`Backed up ${favourites.length} online favourites and appearance settings. Local files and history stayed on this device.`;

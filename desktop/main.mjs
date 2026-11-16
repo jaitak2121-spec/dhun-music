@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks, RELEASES } from './model.mjs';
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
-import { cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
+import { cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
 import {searchSuggestions} from './search-suggestions.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -87,6 +87,7 @@ try {
 } catch { /* First launch: no imported files. */ }
 protocol.handle('dhun', serve);
 handle('cloudStatus',cloudStatus);
+handle('cloudAccount',cloudAccount);
 handle('cloudConnect',cloudConnect);
 handle('cloudPoll',cloudPoll);
 handle('cloudBackup',cloudBackup);
@@ -106,7 +107,7 @@ session.defaultSession.setPermissionCheckHandler(() => false);
 handle('search', async value => tracksFromSearch(JSON.parse(await extract(['--flat-playlist', '--dump-single-json', '--', `ytsearch18:${searchTerm(value)} music`], true))));
 handle('suggest', value=>searchSuggestions(value,{language:app.getLocale().split('-')[0]}));
 handle('recommendations', async taste => {
-  const queries=discoveryQueries(taste),generation=++discoveryGeneration,batches=[];
+  const queries=[...discoveryQueries(taste),[taste.language,taste.genres,'new music discoveries'].filter(Boolean).join(' ')],generation=++discoveryGeneration,batches=[];
   let failure;
   for(const query of queries){
     if(generation!==discoveryGeneration)return[];

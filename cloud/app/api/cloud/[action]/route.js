@@ -14,11 +14,12 @@ export async function GET(request, context) {
       catch (error) { if (error.status === 401) return { csrf, user: null }; throw error; }
     }
     if (action === 'connect-info') { await verifiedIdentity(); await limit(request,'connection-info',30); return connectionInfo(new URL(request.url).searchParams.get('code')); }
-    const user = action === 'device-backup' ? await deviceIdentity(request) : await verifiedIdentity(); const sql = db();
+    const user = ['device-backup','device-account'].includes(action) ? await deviceIdentity(request) : await verifiedIdentity(); const sql = db();
+    if (action === 'device-account') return { account: { id: user.id, name: user.name, email: user.email } };
     if (action === 'owner') {
       if (!isOwner(user)) throw new ApiError(403, 'Owner access is required.');
-      // Only users who explicitly enabled a Dhun backup appear here.
-      const accounts = await sql`SELECT u.name, u.email, p.account_consented_at, p.backup_consented_at, p.updated_at, p.revision, jsonb_array_length(p.favourites) AS favourites_count FROM dhun.profiles p JOIN neon_auth."user" u ON u.id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`;
+      // Only accounts that explicitly approved a Dhun device or backup appear here.
+      const accounts = await sql`SELECT u.id, u.name, u.email, p.account_consented_at, p.backup_consented_at, p.updated_at, p.revision, jsonb_array_length(p.favourites) AS favourites_count FROM dhun.profiles p JOIN neon_auth."user" u ON u.id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`;
       return { accounts };
     }
     if (!['backup', 'export','device-backup'].includes(action)) throw new ApiError(404, 'Not found.');
@@ -39,18 +40,23 @@ export async function POST(request, context) {
     if(action === 'connect-approve')return approveConnection(user,body.code,body.agree,body.policyVersion);
     if(action === 'device-disconnect'){await asUser(user.id,[sql`DELETE FROM dhun.devices WHERE id=${user.device_id}::uuid AND user_id=${user.id}::uuid`]);return{ok:true};}
     if (action === 'delete-account') {
-      if (body.confirm !== 'DELETE' || typeof body.password !== 'string' || body.password.length > 128) throw new ApiError(400, 'Confirm deletion with your account password.');
+      if (body.confirm !== 'DELETE') throw new ApiError(400, 'Confirm account deletion.');
       // Managed deleteUser is disabled on this provider. Reauthenticate through
       // managed auth, then delete this exact identity from its own Postgres store.
-      const result = await auth().signIn.email({ email: user.email, password: body.password });
-      if (result.error || result.data?.user?.id !== user.id) throw new ApiError(403, 'The password did not match.');
+      let result;
+      if (typeof body.otp === 'string' && /^\d{6}$/.test(body.otp)) result = await auth().signIn.emailOtp({ email: user.email, otp: body.otp });
+      else {
+        if (typeof body.password !== 'string' || !body.password || body.password.length > 128) throw new ApiError(400, 'Confirm deletion with your password or a fresh email code.');
+        result = await auth().signIn.email({ email: user.email, password: body.password });
+      }
+      if (result.error || result.data?.user?.id !== user.id) throw new ApiError(403, 'Account verification did not match.');
       await sql`DELETE FROM neon_auth."user" WHERE id=${user.id}::uuid`;
       await auth().signOut();
       return { ok: true };
     }
     if (action === 'consent') {
       if (body.agree !== true || body.policyVersion !== POLICY_VERSION) throw new ApiError(400, 'Explicit backup consent is required.');
-      await asUser(user.id, [sql`INSERT INTO dhun.profiles (user_id,account_consent_version,backup_consent_version,backup_consented_at) VALUES (${user.id}::uuid,${POLICY_VERSION},${POLICY_VERSION},now()) ON CONFLICT (user_id) DO NOTHING`]);
+      await asUser(user.id, [sql`INSERT INTO dhun.profiles (user_id,account_consent_version,backup_consent_version,backup_consented_at) VALUES (${user.id}::uuid,${POLICY_VERSION},${POLICY_VERSION},now()) ON CONFLICT (user_id) DO UPDATE SET backup_consent_version=${POLICY_VERSION},backup_consented_at=now()`]);
       return { ok: true };
     }
     if (action === 'backup' || action === 'device-backup') {

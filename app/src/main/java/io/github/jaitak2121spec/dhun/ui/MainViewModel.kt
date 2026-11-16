@@ -1422,76 +1422,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         homeContinuation = null
         homeSeenTitles.clear()
         _homeLoadingMore.value = false
-        _homeRecentlyPlayedLoading.value = _signedIn.value
+        _homeRecentlyPlayedLoading.value = false
+        _homePendingShelves.value = 1
         val taste = AppSettings.discoveryTaste.value
-        if (!_signedIn.value) {
-            _homePendingShelves.value = if (taste.configured) 1 else 0
-            if (!taste.configured) _home.value = UiState.Success(emptyList())
-            else viewModelScope.launch {
-                try {
-                    val result = YtMusicRepository.discovery(taste, discoveryExclusions())
-                    if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
-                        onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
-                    )
-                } finally { homeShelfRequestSettled(identity, generation) }
-            }
-            return
-        }
-        // The core feed plus one browse per supplement. Recently played is left
-        // out: it has its own skeleton at the head of the page rather than the
-        // one at the tail.
-        _homePendingShelves.value = 1 + YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.size + if (taste.configured) 1 else 0
         viewModelScope.launch {
-            if (taste.configured) launch {
-                try {
-                    YtMusicRepository.discovery(taste, discoveryExclusions()).onSuccess { shelves ->
-                        if (isCurrentHomeLoad(identity, generation)) publishHomeShelves(shelves, prepend = true)
-                    }
-                } finally { homeShelfRequestSettled(identity, generation) }
-            }
-            launch {
-                try {
-                    YtMusicRepository.home()
-                        .onSuccess { feed ->
-                            if (!isCurrentHomeLoad(identity, generation)) return@onSuccess
-                            homeContinuation = feed.continuation
-                            val recent = (_home.value as? UiState.Success)?.data.orEmpty().firstOrNull { it.title == "Recents" }
-                            publishHomeShelves(listOfNotNull(recent) + feed.shelves.filterNot { it.title == "Recents" && recent != null }, prepend = true)
-                        }
-                        .onFailure { failure ->
-                            if (isCurrentHomeLoad(identity, generation) && _home.value !is UiState.Success) {
-                                _home.value = UiState.Error(failure.friendly())
-                            }
-                        }
-                } finally {
-                    homeShelfRequestSettled(identity, generation)
-                }
-            }
-            if (_signedIn.value) {
-                launch {
-                    YtMusicRepository.homeRecentlyPlayed()
-                        .onSuccess { shelf ->
-                            if (isCurrentHomeLoad(identity, generation)) {
-                                _homeRecentlyPlayedLoading.value = false
-                                shelf?.let { publishHomeShelves(listOf(it), prepend = true) }
-                            }
-                        }
-                        .onFailure {
-                            if (isCurrentHomeLoad(identity, generation)) _homeRecentlyPlayedLoading.value = false
-                        }
-                }
-            }
-            YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.forEach { browseId ->
-                launch {
-                    try {
-                        YtMusicRepository.homeSupplement(browseId).onSuccess { shelves ->
-                            if (isCurrentHomeLoad(identity, generation)) publishHomeShelves(shelves)
-                        }
-                    } finally {
-                        homeShelfRequestSettled(identity, generation)
-                    }
-                }
-            }
+            try {
+                val result = YtMusicRepository.discovery(taste, discoveryExclusions())
+                if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
+                    onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
+                )
+            } finally { homeShelfRequestSettled(identity, generation) }
         }
     }
 
@@ -1528,39 +1468,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Refreshes the core feed without blanking the current Play page first. */
-    private suspend fun refreshHome(identity: String?) = coroutineScope {
-        if (identity != listenerKey()) return@coroutineScope
+    private suspend fun refreshHome(identity: String?) {
+        if (identity != listenerKey()) return
         val generation = homeLoadGeneration.incrementAndGet()
         _homeLoadingMore.value = false
         _homePendingShelves.value = 0
         _homeRecentlyPlayedLoading.value = false
-        val taste = AppSettings.discoveryTaste.value
-        if (!_signedIn.value) {
-            val result = if (taste.configured) YtMusicRepository.discovery(taste, discoveryExclusions()) else Result.success(emptyList())
-            if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
-                onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
-            )
-            return@coroutineScope
-        }
-        val discovery = if (taste.configured) async { YtMusicRepository.discovery(taste, discoveryExclusions()) } else null
-        val recent = if (_signedIn.value) async { YtMusicRepository.homeRecentlyPlayed() } else null
-        YtMusicRepository.home().onSuccess { feed ->
-            if (!isCurrentHomeLoad(identity, generation)) return@onSuccess
-            homeContinuation = feed.continuation
-            homeSeenTitles.clear()
-            val shelves = feed.shelves.filter { homeSeenTitles.add(it.title.lowercase(Locale.ROOT)) }
-            val previousTaste = (_home.value as? UiState.Success)?.data.orEmpty().filter { it.title == "Picked for your taste" && taste.configured }
-            if (shelves.isNotEmpty()) _home.value = UiState.Success(io.github.jaitak2121spec.dhun.data.cleanHomeShelves(previousTaste + shelves))
-        }
-        discovery?.await()?.onSuccess { shelves ->
-            if (isCurrentHomeLoad(identity, generation)) {
-                val current = (_home.value as? UiState.Success)?.data.orEmpty().filterNot { it.title == "Picked for your taste" }
-                _home.value = UiState.Success(io.github.jaitak2121spec.dhun.data.cleanHomeShelves(shelves + current))
-            }
-        }
-        recent?.await()?.onSuccess { shelf ->
-            if (isCurrentHomeLoad(identity, generation)) shelf?.let { publishHomeShelves(listOf(it), prepend = true) }
-        }
+        homeContinuation = null
+        val result = YtMusicRepository.discovery(AppSettings.discoveryTaste.value, discoveryExclusions())
+        if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
+            onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
+        )
     }
 
     /**

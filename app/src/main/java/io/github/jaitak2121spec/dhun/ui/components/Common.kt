@@ -669,7 +669,7 @@ fun SignInBanner(onSignIn: () -> Unit, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = stringResource(R.string.personalized_recommendations),
+                text = "Your Dhun account · listening stays on this device",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

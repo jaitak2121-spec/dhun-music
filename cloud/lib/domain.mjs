@@ -20,3 +20,11 @@ export function validateBackup(input) {
   if (!p || Object.keys(p).some(key => !['theme', 'appearance', 'reduceMotion'].includes(key)) || !['monochrome', 'indigo', 'forest'].includes(p.theme) || !['dark', 'light', 'system'].includes(p.appearance) || typeof p.reduceMotion !== 'boolean') throw new ApiError(400, 'Invalid appearance preferences.');
   return { revision: input.revision, favourites, preferences: { theme: p.theme, appearance: p.appearance, reduceMotion: p.reduceMotion } };
 }
+
+export function validateGoogleLogin(body, origin) {
+  if (!body || Object.keys(body).some(key => !['provider','dhunConsent','callbackURL','disableRedirect'].includes(key))) throw new ApiError(400, 'Unsupported sign-in option.');
+  if (body?.provider !== 'google' || body.dhunConsent !== true) throw new ApiError(400, 'Accept the account privacy notice before continuing with Google.');
+  let callback;
+  try { callback = new URL(body.callbackURL); } catch { throw new ApiError(400, 'Invalid sign-in return address.'); }
+  if (callback.origin !== origin || callback.pathname !== '/' || callback.hash || [...callback.searchParams.keys()].some(key => key !== 'connect') || callback.searchParams.getAll('connect').length > 1 || (callback.search && !/^[A-F0-9]{8}$/.test(callback.searchParams.get('connect') || ''))) throw new ApiError(400, 'Invalid sign-in return address.');
+}

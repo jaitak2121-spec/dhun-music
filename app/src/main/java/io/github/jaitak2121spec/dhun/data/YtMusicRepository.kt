@@ -64,8 +64,11 @@ object YtMusicRepository {
     }
 
     suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet()): Result<List<HomeShelf>> = call("discovery") {
+        val listening = if (AppSettings.discoveryLearning.value) io.github.jaitak2121spec.dhun.data.stats.ListeningStats.summary(io.github.jaitak2121spec.dhun.data.stats.ReplayPeriod.THIS_MONTH) else null
+        val learned = listening?.songs.orEmpty().filter { it.ms >= 30_000 && it.song.videoId !in excluded && it.song.localUri == null && it.song.localPath == null }
+            .sortedByDescending { it.ms }.map { it.song.artist }
         val batches = coroutineScope {
-            taste.queries.map { query -> async {
+            personalDiscoveryQueries(taste, learned).map { query -> async {
                 withTimeoutOrNull(15_000L) {
                     val songs = search(query, SearchFilter.SONGS).getOrNull().orEmpty()
                         .filterIsInstance<SearchResult.Track>().map { it.song }
@@ -77,8 +80,8 @@ object YtMusicRepository {
         }
         val songs = diverseDiscovery(batches, excluded)
         if (songs.isEmpty()) emptyList() else listOf(HomeShelf(
-            title = "Picked for your taste",
-            subtitle = "Based on your chosen artists, genres and language",
+            title = "Made for you",
+            subtitle = if (learned.isNotEmpty()) "Your listening and music taste, mixed with broader discoveries" else "Your music taste, mixed with broader discoveries",
             items = songs.map { ShelfItem(it.title, it.artist, it.thumbnailUrl, it.videoId, null) },
         ))
     }

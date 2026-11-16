@@ -402,6 +402,13 @@ private fun DhunApp(
     viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
+    val dhunSignedIn by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.connectionState.collectAsStateWithLifecycle()
+    var showDhunAccount by remember { mutableStateOf(false) }
+    if (showDhunAccount) io.github.jaitak2121spec.dhun.ui.screens.CloudBackupDialog(onDismiss = {
+        showDhunAccount = false
+        viewModel.loadHome()
+    })
     val clipboard = LocalClipboardManager.current
     val hazeState = remember { HazeState() }
     // Recording the backdrop layer costs a draw pass, so it only runs when a
@@ -2715,12 +2722,13 @@ private fun DhunApp(
                         )
                     } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
                         TAB_HOME -> HomeScreen(
+                            dhunSignedIn = dhunSignedIn,
                             onTasteChanged = viewModel::loadHome,
                             state = homeState,
                             listState = homeListState,
                             title = stringResource(R.string.listen_now),
                             signedIn = signedIn,
-                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                            onSignIn = { showDhunAccount = true },
                             onDiscover = { query ->
                                 viewModel.searchFor(query, SearchFilter.SONGS)
                                 selectedTab = TAB_SEARCH
@@ -3196,14 +3204,11 @@ private fun DhunApp(
                             // itself rather than being told.
                             TopBarDownloadButton(onClick = { showDownloadManager = true })
                             TopBarAccountButton(
-                                account = account,
+                                account = null,
                                 onClick = {
-                                    if (signedIn) {
-                                        viewModel.loadChannels()
-                                        showAccountSelector = true
-                                    } else showSettings = true
+                                    showDhunAccount = true
                                 },
-                                onSwipeProfile = { forward -> viewModel.stepProfile(forward) },
+                                onSwipeProfile = null,
                             )
                         }
                     },

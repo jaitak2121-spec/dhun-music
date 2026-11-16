@@ -396,6 +396,7 @@ object AppSettings {
     val playbackSpeed = MutableStateFlow(1.0f)
     val themeMode = MutableStateFlow(ThemeMode.DARK)
     val colorTheme = MutableStateFlow(ColorTheme.MONO)
+    val discoveryLearning = MutableStateFlow(true)
     val discoveryTaste = MutableStateFlow(io.github.jaitak2121spec.dhun.data.DiscoveryTaste())
 
     /** Keep playing similar music once the queue runs out. */
@@ -868,6 +869,7 @@ object AppSettings {
             ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "DARK")
         }.getOrDefault(ThemeMode.DARK)
         colorTheme.value = ColorTheme.fromPreference(prefs.getString(KEY_COLOR_THEME, null))
+        discoveryLearning.value = prefs.getBoolean("discovery_learning", true)
         discoveryTaste.value = io.github.jaitak2121spec.dhun.data.DiscoveryTaste(
             prefs.getString("discovery_language", "").orEmpty(),
             prefs.getString("discovery_artists", "").orEmpty(),
@@ -1085,6 +1087,11 @@ object AppSettings {
     fun setAutoplay(value: Boolean) {
         autoplay.value = value
         prefs.edit().putBoolean(KEY_AUTOPLAY, value).apply()
+    }
+
+    fun setDiscoveryLearning(value: Boolean) {
+        discoveryLearning.value = value
+        prefs.edit().putBoolean("discovery_learning", value).apply()
     }
 
     fun setDiscoveryTaste(value: io.github.jaitak2121spec.dhun.data.DiscoveryTaste) {

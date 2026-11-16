@@ -97,7 +97,10 @@ try {
       {id:'lmnopqrstuv',title:'Discovery fixture two',artist:'Fixture artist two',duration:200},
     ]}));
   });
+  await expect(page.locator('#account-open')).toBeVisible();
   await page.getByRole('button',{name:'Choose your music taste',exact:true}).click();
+  await expect(page.getByLabel('Learn from listening on this device',{exact:true})).toBeChecked();
+  await page.getByLabel('Learn from listening on this device',{exact:true}).uncheck();
   await page.getByLabel('Music language',{exact:true}).fill('English');
   await page.getByLabel('Up to 3 artists, separated by commas',{exact:true}).fill('Fixture artist');
   await page.getByRole('button',{name:'Save and refresh',exact:true}).click();
@@ -110,7 +113,7 @@ try {
   await page.getByRole('button',{name:'Fine-tune your music taste',exact:true}).click();
   await expect(page.getByLabel('Music language',{exact:true})).toHaveValue('English');
   await page.getByRole('button',{name:'Reset preferences and hidden songs',exact:true}).click();
-  await expect(page.locator('#discovery-tracks li')).toHaveCount(0);
+  await expect(page.locator('#discovery-tracks li')).toHaveCount(2);
   await application.evaluate(({ipcMain})=>{
     ipcMain.removeHandler('dhun:suggest');ipcMain.removeHandler('dhun:search');
     ipcMain.handle('dhun:suggest',async(_event,query)=>{

@@ -18,15 +18,17 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Separate from Google sign-in. No YouTube cookies or plaintext token fallback. */
+/** Dhun identity is separate from optional YouTube sessions. No plaintext token fallback. */
 class CloudAccounts(context: Context) {
     companion object {
+        val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
         const val URL = "https://dhun-cloud.vercel.app"
         private const val ALIAS = "dhun_cloud_session"
         private val http = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
             .callTimeout(30, TimeUnit.SECONDS).build()
     }
     private val prefs = context.applicationContext.getSharedPreferences("dhun_cloud_session", Context.MODE_PRIVATE)
+    init { connectionState.value = connected }
     private var pendingCode: String? = null
     val connected: Boolean get() = prefs.contains("session")
     private fun key(create: Boolean): SecretKey = synchronized(CloudAccounts::class.java) {
@@ -54,6 +56,7 @@ class CloudAccounts(context: Context) {
         cipher.init(Cipher.ENCRYPT_MODE, key(true))
         val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(value.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
         check(prefs.edit().putString("session", encrypted).commit()) { "Could not save the secure session." }
+        connectionState.value = true
     }
     private fun request(action: String, body: JSONObject? = null, authenticated: Boolean = true): JSONObject {
         val builder = Request.Builder().url("$URL/api/cloud/$action")
@@ -63,6 +66,7 @@ class CloudAccounts(context: Context) {
             val source = response.body?.source() ?: error("No response from Dhun Cloud.")
             check(!source.request(2_000_001)) { "Cloud response was too large." }
             val data = try { JSONObject(source.readUtf8()) } catch (_: Exception) { error("Dhun Cloud is temporarily unavailable.") }
+            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false }
             check(response.isSuccessful) { data.optString("error", "Cloud request failed.") }
             return data
         }
@@ -80,11 +84,13 @@ class CloudAccounts(context: Context) {
         val data = request("connect-poll", JSONObject().put("deviceCode", pendingCode ?: error("Start a connection first.")), false)
         if (data.optBoolean("pending")) false else { saveToken(data.getString("token")); pendingCode = null; true }
     }
+    suspend fun account(): JSONObject = withContext(Dispatchers.IO) { request("device-account").getJSONObject("account") }
     suspend fun backup(): JSONObject = withContext(Dispatchers.IO) { request("device-backup") }
     suspend fun upload(value: JSONObject): JSONObject = withContext(Dispatchers.IO) { request("device-backup", value) }
     suspend fun disconnect() = withContext(Dispatchers.IO) {
         request("device-disconnect", JSONObject())
         check(prefs.edit().clear().commit()) { "Could not clear the device connection." }
+        connectionState.value = false
     }
-    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." } }
+    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false }
 }

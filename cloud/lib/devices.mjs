@@ -6,7 +6,7 @@ export async function deviceIdentity(request) {
   const token=request.headers.get('authorization')?.replace(/^Bearer /,'');
   if (!validToken(token)) throw new ApiError(401,'Connect your Dhun account again.');
   const sql=db();
-  const [row]=await sql`SELECT u.id,u.email,d.id AS device_id FROM dhun.devices d JOIN neon_auth."user" u ON u.id=d.user_id WHERE d.token_hash=${tokenHash(token)} AND d.expires_at>now() AND u."emailVerified"=true AND coalesce(u.banned,false)=false`;
+  const [row]=await sql`SELECT u.id,u.name,u.email,d.id AS device_id FROM dhun.devices d JOIN neon_auth."user" u ON u.id=d.user_id WHERE d.token_hash=${tokenHash(token)} AND d.expires_at>now() AND u."emailVerified"=true AND coalesce(u.banned,false)=false`;
   if(!row)throw new ApiError(401,'Your cloud connection expired or was revoked. Connect again.');
   return row;
 }
@@ -37,10 +37,10 @@ export async function connectionInfo(code) {
 }
 export async function approveConnection(user,code,agree,policyVersion) {
   await connectionInfo(code);
-  if(agree!==true||policyVersion!==POLICY_VERSION)throw new ApiError(400,'Explicit backup consent is required.');
+  if(agree!==true||policyVersion!==POLICY_VERSION)throw new ApiError(400,'Explicit Dhun account connection consent is required.');
   const sql=db();
   const result=await sql.transaction([
-    sql`INSERT INTO dhun.profiles (user_id,account_consent_version,backup_consent_version,backup_consented_at) VALUES (${user.id}::uuid,${POLICY_VERSION},${POLICY_VERSION},now()) ON CONFLICT (user_id) DO UPDATE SET backup_consent_version=${POLICY_VERSION},backup_consented_at=now()`,
+    sql`INSERT INTO dhun.profiles (user_id,account_consent_version) VALUES (${user.id}::uuid,${POLICY_VERSION}) ON CONFLICT (user_id) DO UPDATE SET account_consent_version=${POLICY_VERSION}`,
     sql`UPDATE dhun.connections SET user_id=${user.id}::uuid WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL RETURNING user_code`,
   ]);
   if(!result[1].length)throw new ApiError(409,'This code expired or was already approved.');

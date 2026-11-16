@@ -10,7 +10,7 @@ async function token(){try{const data=await readFile(tokenFile());requireStorage
 async function api(action,body,credential){
   const response=await fetch(`${CLOUD_URL}/api/cloud/${action}`,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(credential?{authorization:`Bearer ${credential}`}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000),redirect:'error'});
   let data;try{data=await response.json();}catch{throw Error('Dhun Cloud is not available. Please try later.');}
-  if(!response.ok)throw Error(data.error || 'Cloud request failed.');return data;
+  if(!response.ok){if(response.status===401&&credential)await unlink(tokenFile()).catch(error=>{if(error.code!=='ENOENT')throw error;});throw Error(data.error || 'Cloud request failed.');}return data;
 }
 export async function cloudStatus(){return{connected:Boolean(await token())};}
 export async function cloudConnect(){
@@ -29,6 +29,7 @@ export async function cloudPoll(){
   if(typeof data.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(data.token))throw Error('Invalid cloud session.');
   requireStorage();await writeFile(tokenFile(),safeStorage.encryptString(data.token),{mode:0o600});pending=null;return{connected:true};
 }
+export async function cloudAccount(){const secret=await token();if(!secret)throw Error('Sign in to Dhun first.');return api('device-account',undefined,secret);}
 export async function cloudBackup(){const secret=await token();if(!secret)throw Error('Connect your Dhun account first.');return api('device-backup',undefined,secret);}
 export async function cloudUpload(backup){const secret=await token();if(!secret)throw Error('Connect your Dhun account first.');return api('device-backup',backup,secret);}
 export async function cloudDisconnect(){

@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,12 +48,18 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
             finally { busy = false }
         }
     }
+    LaunchedEffect(connected) {
+        if (connected) perform {
+            val account = cloud.account()
+            message = "Signed in as ${account.optString("name")} · ${account.getString("email")}. Backups remain optional."
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Dhun Cloud · optional") },
+        title = { Text("Your Dhun account") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Back up your appearance settings. Android keeps online favourites already stored in your cloud backup, but does not upload YouTube likes or change your YouTube library. Desktop can back up and restore online favourites.")
+                Text("Sign in once with Google in your browser to create your Dhun account. Recommendations use listening on this device, without a YouTube Music login. YouTube Music connection remains optional for its library features. Back up your appearance settings. Android keeps online favourites already stored in your cloud backup, but does not upload YouTube likes or change your YouTube library. Desktop can back up and restore online favourites.")
                 Spacer(Modifier.height(12.dp))
                 Text("The Dhun owner can access data you choose to store. Google credentials, listening history, audio files and local paths are excluded.")
                 Spacer(Modifier.height(12.dp))
@@ -65,11 +72,11 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         var approved = false
                         repeat(100) { if (!approved) { delay(3000); approved = cloud.poll() } }
                         check(approved) { "Connection expired. Try again." }
-                        message = "Connected. Press Upload appearance backup when you choose."
-                    } }) { Text("Connect account") }
+                        message = "Signed in to Dhun. Your recommendations learn on this device. Backups are separately optional."
+                    } }) { Text("Sign in to Dhun") }
                 } else {
                     TextButton(enabled = !busy, onClick = { perform {
-                        val profile = cloud.backup().optJSONObject("profile") ?: error("Enable cloud backup in Privacy & manage data first.")
+                        val profile = cloud.backup().optJSONObject("profile")?.takeIf { !it.isNull("backup_consented_at") } ?: error("Enable optional backups in Privacy & manage data first.")
                         pendingUpload = profile
                         pendingRestore = null
                         message = "Replace cloud appearance settings with this device's theme and animation preference? Existing cloud favourites will be kept."

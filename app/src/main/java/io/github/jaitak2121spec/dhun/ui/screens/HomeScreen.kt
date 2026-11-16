@@ -105,6 +105,7 @@ fun HomeScreen(
     contentPadding: PaddingValues,
     title: String,
     signedIn: Boolean = true,
+    dhunSignedIn: Boolean = false,
     onSignIn: (() -> Unit)? = null,
     onDiscover: (String) -> Unit = {},
     /**
@@ -153,12 +154,12 @@ fun HomeScreen(
             if (!signedIn && !taste.configured) {
                 item { GuestDiscovery(onDiscover) }
             }
-            if (!signedIn && onSignIn != null) {
+            if (!dhunSignedIn && onSignIn != null) {
                 item {
                     SignInBanner(onSignIn = onSignIn, modifier = Modifier.padding(bottom = 8.dp))
                 }
             }
-            if (signedIn || taste.configured) when (state) {
+            when (state) {
                 is UiState.Loading -> {
                     if (recentlyPlayedLoading) {
                         recentlyPlayedSkeleton(listLayout = recentsViewType == LibraryViewType.LIST)

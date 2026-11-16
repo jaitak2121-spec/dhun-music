@@ -19,6 +19,15 @@ data class DiscoveryTaste(val language: String = "", val artists: String = "", v
     val configured: Boolean get() = queries.isNotEmpty()
 }
 
+/** Two preference seeds, two learned seeds, and one broader discovery seed. */
+fun personalDiscoveryQueries(taste: DiscoveryTaste, learnedArtists: List<String>): List<String> {
+    val context = listOf(taste.language.trim().take(40), taste.genres.trim().take(60)).filter { it.isNotBlank() }.joinToString(" ")
+    val learned = learnedArtists.map { it.trim().take(50) }.filter { it.isNotBlank() && !it.equals("Unknown", true) }
+        .distinctBy { it.lowercase(Locale.ROOT) }.take(2).map { "$it $context songs".replace(Regex("\\s+"), " ").trim() }
+    val broader = listOf(context, "new music discoveries").filter { it.isNotBlank() }.joinToString(" ")
+    return (taste.queries.take(2) + learned + broader).distinctBy { it.lowercase(Locale.ROOT) }.take(5)
+}
+
 /** Keep source relevance, interleave seeds, and limit an artist's share of discovery. */
 fun diverseDiscovery(batches: List<List<Song>>, excluded: Set<String> = emptySet(), limit: Int = 18): List<Song> {
     if (limit <= 0) return emptyList()
