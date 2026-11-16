@@ -77,8 +77,6 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text("The Dhun owner can access data you choose to store. Google credentials, listening history, audio files and local paths are excluded.")
                 Spacer(Modifier.height(12.dp))
-                Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (!connected) {
                     Text("Dhun and its account provider store your account ID, name, email and available profile photo. The Dhun owner can access account details to operate the service. Listening history, audio files and local paths are not uploaded. You can export your data or delete your account in Privacy & manage data.")
                     Row(Modifier.fillMaxWidth().toggleable(value = consent, enabled = !busy, role = Role.Checkbox,
@@ -87,6 +85,8 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         Text("I agree to the account privacy notice and storing these account details.")
                     }
                     if (!consent) Text("Accept the privacy notice above to enable Google sign-in.")
+                    Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(enabled = !busy && consent, onClick = { perform {
                         val account = nativeGoogleSignIn(context, cloud) { message = it }
                         message = "Signed in as ${account.optString("name")} · ${account.getString("email")}. Backups remain optional."
@@ -101,6 +101,8 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                         message = "Signed in to Dhun. Your recommendations learn on this device. Backups are separately optional."
                     } }) { Text("Use browser sign-in instead") }
                 } else {
+                    Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(enabled = !busy, onClick = { perform {
                         val profile = cloud.backup().optJSONObject("profile")?.takeIf { !it.isNull("backup_consented_at") } ?: error("Enable optional backups in Privacy & manage data first.")
                         pendingUpload = profile
