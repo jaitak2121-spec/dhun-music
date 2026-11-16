@@ -404,10 +404,13 @@ private fun DhunApp(
     viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
+    val dhunAccount = remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
     val dhunSignedIn by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.connectionState.collectAsStateWithLifecycle()
     var showDhunAccount by remember { mutableStateOf(false) }
     val dhunName by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.displayName.collectAsStateWithLifecycle()
+    LaunchedEffect(dhunSignedIn) {
+        if (dhunSignedIn && dhunName == null) runCatching { dhunAccount.account() }
+    }
     val greetingVariant = remember { (System.currentTimeMillis() / 900_000L % 3).toInt() }
     var showDevicePlaylists by remember { mutableStateOf(false) }
     var devicePlaylistSong by remember { mutableStateOf<Song?>(null) }
