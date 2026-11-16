@@ -6,6 +6,8 @@ A personal music experience for Android, Windows and macOS. Your music. Your rhy
 
 ## Download
 
+**[Get Dhun — download for Android, Windows and Mac](https://dhun-cloud.vercel.app/download)**
+
 | Device | Direct installer |
 | --- | --- |
 | Android 8+ ARM | [Download APK](https://github.com/jaitak2121-spec/dhun-music/releases/download/preview/Dhun.apk) |
