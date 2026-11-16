@@ -37,9 +37,11 @@ export default function Download() {
           <a className={styles.primary} href="#download">Get Dhun <Arrow/></a>
           <p className={styles.availability}>ANDROID · WINDOWS · macOS</p>
         </div>
-        <div className={styles.record} aria-hidden="true">
-          <div className={styles.disc}><div className={styles.label}><img src="/logo.svg" width="104" height="104" alt=""/><span>Dhun</span><small>YOUR MUSIC. YOUR RHYTHM.</small></div></div>
-          <span className={styles.recordCaption}>MADE FOR YOUR EVERYDAY SOUNDTRACK</span>
+        <div className={styles.record}>
+          <input id="pause-record" type="checkbox" className={styles.motionPause}/>
+          <div className={styles.disc} aria-hidden="true"><div className={styles.label}><img src="/logo.svg" width="104" height="104" alt=""/><span>Dhun</span><small>YOUR MUSIC. YOUR RHYTHM.</small></div></div>
+          <span className={styles.recordCaption} aria-hidden="true">MADE FOR YOUR EVERYDAY SOUNDTRACK</span>
+          <label htmlFor="pause-record" className={styles.motionControl}>Pause animation</label>
         </div>
       </section>
       <ul className={styles.features} role="list"><li>Discovery that follows your taste</li><li>Lyrics when available</li><li>Favourites, queues & your own themes</li></ul>

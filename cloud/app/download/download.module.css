@@ -132,6 +132,9 @@
   padding:10px 0 36px;
   min-width:0
 }
+.motionPause,.motionControl {
+  display:none
+}
 .disc {
   width:min(100%,410px);
   aspect-ratio:1;
@@ -148,7 +151,7 @@
   position:absolute;
   inset:0;
   border-radius:inherit;
-  background:conic-gradient(from 20deg,transparent 0deg,#ffffff0d 45deg,transparent 95deg,transparent 180deg,#ffffff0d 225deg,transparent 280deg);
+  background:conic-gradient(from 20deg,transparent 0deg,#ffffff21 45deg,transparent 95deg,transparent 180deg,#ffffff18 225deg,transparent 280deg);
   pointer-events:none
 }
 .label {
@@ -549,6 +552,66 @@
   }
 }
 @media(prefers-reduced-motion:no-preference) {
+  .record {
+    padding-bottom:76px
+  }
+  .recordCaption {
+    bottom:40px
+  }
+  .motionPause {
+    display:block;
+    position:absolute;
+    bottom:13px;
+    left:calc(50% - 58px);
+    width:14px;
+    height:14px;
+    margin:0;
+    accent-color:#eee;
+    z-index:2
+  }
+  .motionControl {
+    display:block;
+    position:absolute;
+    bottom:0;
+    left:calc(50% - 70px);
+    width:140px;
+    padding:10px 8px 10px 32px;
+    margin:0;
+    color:#aaa;
+    font-size:10px;
+    line-height:20px;
+    cursor:pointer
+  }
+  .disc:after {
+    animation:spin 24s linear infinite
+  }
+  .motionPause:checked ~ .disc:after {
+    animation-play-state:paused
+  }
+  .platform {
+    transition:transform .2s ease-out,border-color .2s
+  }
+  .platform:focus-within {
+    transform:translateY(-4px);
+    border-color:#777
+  }
+  .primary svg,.installer svg {
+    transition:transform .2s ease-out
+  }
+  .primary:hover svg,.installer:hover svg {
+    transform:translateY(3px)
+  }
+  @media(hover:hover) {
+    .platform:hover {
+      transform:translateY(-4px);
+      border-color:#777
+    }
+  }
+  @keyframes spin {
+    to {
+      transform:rotate(360deg)
+    }
+  }
   .intro,.record {
     animation:enter .65s ease-out both
   }
