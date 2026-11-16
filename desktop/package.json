@@ -1,7 +1,7 @@
 {
   "name": "dhun-desktop",
   "productName": "Dhun",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Your music. Your rhythm.",
   "author": "Dhun contributors",
   "license": "GPL-3.0-only",
@@ -66,9 +66,14 @@
         "dmg"
       ],
       "icon": "resources/icon.icns",
-      "identity": null,
+      "identity": "-",
       "minimumSystemVersion": "12.0",
-      "artifactName": "Dhun-Mac-${arch}.dmg"
+      "artifactName": "Dhun-Mac-${arch}.dmg",
+      "hardenedRuntime": false,
+      "strictVerify": true,
+      "binaries": [
+        "Contents/Resources/player/yt-dlp"
+      ]
     },
     "dmg": {
       "title": "Dhun",

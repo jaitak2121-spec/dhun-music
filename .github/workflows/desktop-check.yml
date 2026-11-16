@@ -57,6 +57,18 @@ jobs:
         run: npm run smoke
         env:
           DHUN_SMOKE_APP: dist/${{ matrix.target == 'mac-arm64' && 'mac-arm64' || 'mac' }}/Dhun.app/Contents/MacOS/Dhun
+      - name: Verify the Mac installer and bundled player signatures
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          # Validate the app inside the actual download, not just the staging folder.
+          MOUNT_PATH="$(mktemp -d "$RUNNER_TEMP/dhun-installer.XXXXXX")"
+          trap 'hdiutil detach "$MOUNT_PATH" >/dev/null 2>&1 || true; rmdir "$MOUNT_PATH"' EXIT
+          hdiutil verify "dist/Dhun-Mac-${{ matrix.target == 'mac-arm64' && 'arm64' || 'x64' }}.dmg"
+          hdiutil attach "dist/Dhun-Mac-${{ matrix.target == 'mac-arm64' && 'arm64' || 'x64' }}.dmg" -readonly -nobrowse -mountpoint "$MOUNT_PATH"
+          codesign --verify --deep --strict --verbose=2 "$MOUNT_PATH/Dhun.app"
+          codesign --verify --strict --verbose=2 "$MOUNT_PATH/Dhun.app/Contents/Resources/player/yt-dlp"
+          "$MOUNT_PATH/Dhun.app/Contents/Resources/player/yt-dlp" --version
       - name: Install and test the Windows application
         if: runner.os == 'Windows'
         shell: pwsh
