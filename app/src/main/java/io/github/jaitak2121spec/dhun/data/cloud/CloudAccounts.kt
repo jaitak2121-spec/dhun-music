@@ -1,6 +1,7 @@
 package io.github.jaitak2121spec.dhun.data.cloud
 
 import android.content.Context
+import android.content.Intent
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
@@ -12,7 +13,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.security.KeyStore
-import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -23,6 +23,14 @@ import javax.crypto.spec.GCMParameterSpec
 class CloudAccounts(context: Context) {
     companion object {
         val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
+        val accountReturns = kotlinx.coroutines.flow.MutableStateFlow(0)
+        fun consumeReturn(intent: Intent) {
+            // A return link only opens the account screen. The saved secret,
+            // not anything in the URL, authorizes the pending connection.
+            if (intent.action == Intent.ACTION_VIEW && intent.dataString == "dhun://account/return") {
+                accountReturns.value += 1
+            }
+        }
         const val URL = "https://dhun-cloud.vercel.app"
         private const val ALIAS = "dhun_cloud_session"
         private val http = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
@@ -30,8 +38,8 @@ class CloudAccounts(context: Context) {
     }
     private val prefs = context.applicationContext.getSharedPreferences("dhun_cloud_session", Context.MODE_PRIVATE)
     init { connectionState.value = connected }
-    private var pendingCode: String? = null
     val connected: Boolean get() = prefs.contains("session")
+    val pending: Boolean get() = prefs.contains("pending") && prefs.getLong("pendingExpires", 0) > System.currentTimeMillis()
     private fun key(create: Boolean): SecretKey = synchronized(CloudAccounts::class.java) {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(ALIAS, null) as? SecretKey) ?: run {
@@ -42,8 +50,8 @@ class CloudAccounts(context: Context) {
             }.generateKey()
         }
     }
-    private fun token(): String {
-        val stored = prefs.getString("session", null) ?: error("Connect your Dhun account first.")
+    private fun readSecret(name: String): String {
+        val stored = prefs.getString(name, null) ?: error("Start sign-in from Dhun again.")
         return try {
             val parts = stored.split(':')
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -51,17 +59,20 @@ class CloudAccounts(context: Context) {
             String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8)
         } catch (_: Exception) { error("Secure connection could not be opened. Forget the connection and connect again.") }
     }
-    private fun saveToken(value: String) {
+    private fun token(): String = readSecret("session")
+    private fun saveSecret(name: String, value: String) {
         check(Regex("^[A-Za-z0-9_-]{43}$").matches(value)) { "Invalid cloud session." }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key(true))
         val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(value.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
-        check(prefs.edit().putString("session", encrypted).commit()) { "Could not save the secure session." }
+        check(prefs.edit().putString(name, encrypted).commit()) { "Could not save the secure connection." }
+    }
+    private fun saveToken(value: String) {
+        saveSecret("session", value)
         connectionState.value = true
     }
     private fun request(action: String, body: JSONObject? = null, authenticated: Boolean = true): JSONObject {
         val builder = Request.Builder().url("$URL/api/cloud/$action")
-        if (action.startsWith("native-google-")) builder.header("Origin", URL)
         if (authenticated) builder.header("Authorization", "Bearer ${token()}")
         if (body != null) builder.post(body.toString().toRequestBody("application/json".toMediaType()))
         http.newCall(builder.build()).execute().use { response ->
@@ -76,31 +87,21 @@ class CloudAccounts(context: Context) {
     suspend fun start(): JSONObject = withContext(Dispatchers.IO) {
         check(!connected) { "Disconnect the existing account first." }
         key(true)
-        val data = request("connect-start", JSONObject().put("name", "Dhun Android"), false)
+        val data = request("connect-start", JSONObject().put("name", "Dhun Android browser"), false)
         val code = data.getString("userCode")
         check(Regex("^[A-F0-9]{8}$").matches(code) && data.getString("verificationUrl") == "$URL/?connect=$code") { "Invalid connection response." }
-        pendingCode = data.getString("deviceCode")
+        saveSecret("pending", data.getString("deviceCode"))
+        check(prefs.edit().putLong("pendingExpires", System.currentTimeMillis() + 300_000).commit()) { "Could not save sign-in progress." }
         data
-    }
-    suspend fun startNativeGoogle(): JSONObject = withContext(Dispatchers.IO) {
-        check(!connected) { "Disconnect the existing Dhun account first." }
-        key(true)
-        val data = request("native-google-start", JSONObject(), false)
-        val challenge = data.getString("challenge")
-        val expectedNonce = MessageDigest.getInstance("SHA-256").digest(challenge.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        check(Regex("^[A-Za-z0-9_-]{43}$").matches(challenge) && data.getString("nonce") == expectedNonce &&
-            Regex("^[0-9]+-[A-Za-z0-9_-]+\\.apps\\.googleusercontent\\.com$").matches(data.getString("serverClientId"))) { "Invalid Google sign-in configuration." }
-        data
-    }
-    suspend fun completeNativeGoogle(challenge: String, idToken: String): JSONObject = withContext(Dispatchers.IO) {
-        val data = request("native-google-complete", JSONObject().put("challenge", challenge).put("idToken", idToken)
-            .put("agree", true).put("policyVersion", "2026-11-16"), false)
-        saveToken(data.getString("token"))
-        data.getJSONObject("account")
     }
     suspend fun poll(): Boolean = withContext(Dispatchers.IO) {
-        val data = request("connect-poll", JSONObject().put("deviceCode", pendingCode ?: error("Start a connection first.")), false)
-        if (data.optBoolean("pending")) false else { saveToken(data.getString("token")); pendingCode = null; true }
+        check(pending) { "Sign-in expired. Start again from Dhun." }
+        val data = request("connect-poll", JSONObject().put("deviceCode", readSecret("pending")), false)
+        if (data.optBoolean("pending")) false else {
+            saveToken(data.getString("token"))
+            prefs.edit().remove("pending").remove("pendingExpires").commit()
+            true
+        }
     }
     suspend fun account(): JSONObject = withContext(Dispatchers.IO) { request("device-account").getJSONObject("account") }
     suspend fun backup(): JSONObject = withContext(Dispatchers.IO) { request("device-backup") }

@@ -36,7 +36,7 @@ export async function connectionInfo(code) {
   return row;
 }
 export async function approveConnection(user,code,agree,policyVersion) {
-  await connectionInfo(code);
+  const connection = await connectionInfo(code);
   if(agree!==true||policyVersion!==POLICY_VERSION)throw new ApiError(400,'Explicit Dhun account connection consent is required.');
   const sql=db();
   const result=await sql.transaction([
@@ -44,5 +44,5 @@ export async function approveConnection(user,code,agree,policyVersion) {
     sql`UPDATE dhun.connections SET user_id=${user.id}::uuid WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL RETURNING user_code`,
   ]);
   if(!result[1].length)throw new ApiError(409,'This code expired or was already approved.');
-  return{ok:true};
+  return{ok:true,returnToApp:connection.name==='Dhun Android browser'};
 }

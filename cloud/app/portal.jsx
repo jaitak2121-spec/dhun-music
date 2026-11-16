@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 import { createAuthClient } from '@neon/auth/next';
 const client = createAuthClient();
 const policyVersion = '2026-11-16';
+// Fixed, credential-free link: Android redeems its own locally saved secret.
+const androidReturn = 'intent://account/return#Intent;scheme=dhun;package=io.github.jaitak2121spec.dhun;end';
 
 export default function Portal() {
   const [session, setSession] = useState(null), [csrf, setCsrf] = useState('');
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [register, setRegister] = useState(false), [profile, setProfile] = useState(null), [accounts, setAccounts] = useState(null);
   const [connection,setConnection]=useState(null);
+  const [returnToApp,setReturnToApp]=useState(false);
   async function api(action, body) {
     const response = await fetch(`/api/cloud/${action}`, { method: body === undefined ? 'GET' : 'POST', headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'x-dhun-csrf': csrf }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     const data = await response.json(); if (!response.ok) throw Error(data.error || 'Please try again.'); return data;
@@ -53,6 +56,7 @@ export default function Portal() {
     <p className="eyebrow">YOUR DHUN ACCOUNT</p><h1>One account.<br/>Your kind of music.</h1>
     <p>Sign in to Dhun and connect your device. Recommendations learn from listening on that device. Backups are separately optional; your listening history is never uploaded here.</p>
     <div className="notice" role="status" aria-live="polite">{loading ? 'Checking your account…' : message}</div>
+    {returnToApp && <p><a href={androidReturn}>Return to Dhun</a> if your browser did not reopen it automatically.</p>}
     {!loading && !session && <div className="grid">
       <section className="card"><h2>Welcome to Dhun.</h2>
       <form onSubmit={googleLogin}>
@@ -69,7 +73,7 @@ export default function Portal() {
       <section className="card"><h2>Only what you choose.</h2><p>Your account stores your name and email. Enabling a backup separately lets Dhun store online song titles, artists, video IDs and appearance preferences.</p><p>There is no listening history or analytics collection here. Google credentials, YouTube cookies, audio files and local file paths are excluded.</p><p>Cloud backup is an early preview. In current Dhun previews, open Settings → Dhun Cloud to connect a device and manually back up supported data.</p></section>
     </div>}
     {session && <div className="grid">
-      {connection && <section className="card full"><h2>Connect {connection.name}?</h2><p>Check that the app shows this code: <strong>{connection.user_code}</strong>. Approve only a device you are using. The connection lasts 30 days. Backups require separate consent; listening history stays on the device.</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('connect-approve',{code:connection.user_code,agree:true,policyVersion});setConnection(null);await refresh();setMessage('Signed in. Return to Dhun to enjoy your music. Backups are optional.');history.replaceState(null,'','/');});}}><label><input type="checkbox" required/>I choose to connect this device to my Dhun account. Backups remain off until I enable them separately. The Dhun owner can access stored cloud data to operate the service.</label><button disabled={busy}>Approve this device</button></form></section>}
+      {connection && <section className="card full"><h2>Connect {connection.name}?</h2><p>Check that the app shows this code: <strong>{connection.user_code}</strong>. Approve only a device you are using. The connection lasts 30 days. Backups require separate consent; listening history stays on the device.</p><form onSubmit={e=>{e.preventDefault();run(async()=>{const approved=await api('connect-approve',{code:connection.user_code,agree:true,policyVersion});setConnection(null);setMessage('Signed in. Return to Dhun to enjoy your music. Backups are optional.');history.replaceState(null,'','/');if(approved.returnToApp){setReturnToApp(true);location.assign(androidReturn);}await refresh();});}}><label><input type="checkbox" required/>I choose to connect this device to my Dhun account. Backups remain off until I enable them separately. The Dhun owner can access stored cloud data to operate the service.</label><button disabled={busy}>Approve this device</button></form></section>}
       <section className="card"><h2>Hello, {session.name || 'music lover'}.</h2><p>{session.email}</p><p>{session.verified ? 'Email verified.' : 'Verify your email before storing a backup.'}</p>
         {!session.verified && <><button disabled={busy} onClick={()=>run(()=>authAction(()=>client.emailOtp.sendVerificationOtp({email:session.email,type:'email-verification'}),'Verification code requested. Check your inbox.'))}>Send verification code</button><form onSubmit={e=>{e.preventDefault();const otp=new FormData(e.currentTarget).get('otp');run(async()=>{await authAction(()=>client.emailOtp.verifyEmail({email:session.email,otp}),'Email verified.');await refresh();});}}><label>Email code<input name="otp" autoComplete="one-time-code" required maxLength={16}/></label><button disabled={busy}>Verify email</button></form></>}
         <button className="secondary" disabled={busy} onClick={()=>run(async()=>{await authAction(()=>client.signOut(),'Signed out.');setAccounts(null);await refresh();})}>Sign out</button>

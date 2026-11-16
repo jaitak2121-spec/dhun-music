@@ -279,6 +279,7 @@ class MainActivity : AppCompatActivity() {
         // Before the composition, so a cold launch from a widget's artwork has
         // the request already standing by the time DhunApp first reads it.
         PlayerDeepLink.consume(intent)
+        io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.consumeReturn(intent)
         JamInviteLink.consume(intent)
         // Likewise for a link tapped or shared from another app — see [MusicLink].
         MusicLink.consume(intent)
@@ -377,6 +378,7 @@ class MainActivity : AppCompatActivity() {
         // Replaces what getIntent() returns, so the extra this consumes is the
         // one that just arrived and not the one the task was started with.
         setIntent(intent)
+        io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.consumeReturn(intent)
         PlayerDeepLink.consume(intent)
         JamInviteLink.consume(intent)
         MusicLink.consume(intent)
@@ -405,6 +407,8 @@ private fun DhunApp(
     remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
     val dhunSignedIn by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.connectionState.collectAsStateWithLifecycle()
     var showDhunAccount by remember { mutableStateOf(false) }
+    val accountReturns by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.accountReturns.collectAsStateWithLifecycle()
+    LaunchedEffect(accountReturns) { if (accountReturns > 0) showDhunAccount = true }
     if (showDhunAccount) io.github.jaitak2121spec.dhun.ui.screens.CloudBackupDialog(onDismiss = {
         showDhunAccount = false
         viewModel.loadHome()

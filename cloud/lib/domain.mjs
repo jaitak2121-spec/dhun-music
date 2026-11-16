@@ -28,20 +28,3 @@ export function validateGoogleLogin(body, origin) {
   try { callback = new URL(body.callbackURL); } catch { throw new ApiError(400, 'Invalid sign-in return address.'); }
   if (callback.origin !== origin || callback.pathname !== '/' || callback.hash || [...callback.searchParams.keys()].some(key => key !== 'connect') || callback.searchParams.getAll('connect').length > 1 || (callback.search && !/^[A-F0-9]{8}$/.test(callback.searchParams.get('connect') || ''))) throw new ApiError(400, 'Invalid sign-in return address.');
 }
-
-export function googleNativeConfig() {
-  const serverClientId = process.env.DHUN_GOOGLE_WEB_CLIENT_ID || '';
-  const enabled = process.env.DHUN_NATIVE_GOOGLE_ENABLED === 'true' && /^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(serverClientId);
-  return { enabled, ...(enabled ? { serverClientId } : {}) };
-}
-
-/** These unverified claims are only request-binding checks, never identity proof. */
-export function validateNativeGoogle(body, clientId) {
-  if (!body || Object.keys(body).some(key => !['challenge','idToken','agree','policyVersion'].includes(key)) || !validToken(body.challenge) || body.agree !== true || body.policyVersion !== POLICY_VERSION) throw new ApiError(400, 'Review the Dhun account privacy notice before signing in.');
-  if (typeof body.idToken !== 'string' || body.idToken.length > 20000 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(body.idToken)) throw new ApiError(400, 'Invalid Google credential.');
-  let claims;
-  try { claims = JSON.parse(Buffer.from(body.idToken.split('.')[1], 'base64url').toString('utf8')); } catch { throw new ApiError(400, 'Invalid Google credential.'); }
-  const now = Math.floor(Date.now() / 1000);
-  if (!claims || claims.aud !== clientId || claims.nonce !== tokenHash(body.challenge) || !['https://accounts.google.com','accounts.google.com'].includes(claims.iss) || !Number.isSafeInteger(claims.exp) || claims.exp <= now || !Number.isSafeInteger(claims.iat) || claims.iat > now + 30 || claims.iat < now - 330) throw new ApiError(401, 'Google sign-in expired or did not match this request. Try again.');
-}
-
