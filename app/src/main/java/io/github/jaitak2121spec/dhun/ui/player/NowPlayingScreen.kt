@@ -68,8 +68,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -1320,25 +1318,16 @@ fun NowPlayingScreen(
         }
     }
 
-    // Horizontal fling skips tracks. The portrait player hangs it on the whole
-    // screen, the landscape one on the sleeve alone — the right column there is
-    // full of horizontal sliders and a lyric list that should not be one stray
-    // sideways drag away from changing the song.
-    val skipSwipeGesture = Modifier.pointerInput(showAudioPipeline, panelScrolling, controlsLocked) {
+    // Swipe the sleeve left for Queue, right for Lyrics. Landscape keeps the
+    // gesture off its sliders and scrolling panels.
+    val panelSwipeGesture = Modifier.pointerInput(showAudioPipeline, panelScrolling, controlsLocked) {
         if (showAudioPipeline || panelScrolling) return@pointerInput
         var total = 0f
         detectHorizontalDragGestures(
             onDragStart = { total = 0f },
             onDragCancel = { setSwipeOffset(0f) },
             onDragEnd = {
-                // The same two buzzes the transport glyphs give, so swiping the
-                // sleeve and tapping skip feel like one gesture with two
-                // spellings.
-                // Swipe left for Queue; right for Lyrics. Transport buttons still skip.
                 when {
-                    // Still tracks the finger and still springs back, so the
-                    // sleeve does not feel dead — it just says why it did not
-                    // move on.
                     total <= -swipeThreshold -> {
                         haptics.play(Haptic.ToggleOn)
                         queueControlsOpen = true
@@ -1527,7 +1516,7 @@ fun NowPlayingScreen(
                         isPlaying = isPlaying,
                         onCanvasRenderedChange = { canvasRendered = it },
                         modifier = artworkModifier
-                            .then(skipSwipeGesture)
+                            .then(panelSwipeGesture)
                             .graphicsLayer {
                                 scaleX = landscapeArtScale
                                 scaleY = landscapeArtScale
@@ -2060,7 +2049,7 @@ fun NowPlayingScreen(
                     enabled = spotifyCanvasPresentation,
                     onToggle = { spotifyCanvasControlsOpen = !spotifyCanvasControlsOpen },
                 )
-                .then(skipSwipeGesture),
+                .then(panelSwipeGesture),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // The only strip that passes drags through to the sheet, so the
@@ -2608,11 +2597,10 @@ fun NowPlayingScreen(
                 // the banner has all but dissolved, so it reads against the
                 // backdrop rather than against the artwork.
                 if (swipeHintShown) {
-                    val showNext = swipeHintNext
-                    val enabled = if (showNext) hasNext else hasPrevious
-                    val hintAlpha = if (enabled) 0.85f else 0.3f
+                    val showLyrics = swipeHintNext
+                    val hintAlpha = 0.85f
                     Icon(
-                        imageVector = if (showNext) Icons.Rounded.FastForward else Icons.Rounded.FastRewind,
+                        imageVector = if (showLyrics) DhunIcons.Lyrics else DhunIcons.Queue,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier
