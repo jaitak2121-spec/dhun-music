@@ -63,34 +63,39 @@ object YtMusicRepository {
         HomeFeed(InnertubeParser.parseHome(home), InnertubeParser.continuationToken(home))
     }
 
-    suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet(),
+    suspend fun discovery(taste: DiscoveryTaste, excluded: Set<String> = emptySet(), favourites: List<Song> = emptyList(),
         onPartial: (List<HomeShelf>) -> Unit = {},
     ): Result<List<HomeShelf>> = call("discovery") {
         val listening = if (AppSettings.discoveryLearning.value) io.github.jaitak2121spec.dhun.data.stats.ListeningStats.summary(io.github.jaitak2121spec.dhun.data.stats.ReplayPeriod.THIS_MONTH) else null
-        val learned = listening?.songs.orEmpty().filter { it.ms >= 30_000 && it.song.videoId !in excluded && it.song.localUri == null && it.song.localPath == null }
-            .sortedByDescending { it.ms }.map { it.song.artist }
-        val batches = mutableListOf<List<Song>>()
-        fun shelves(): List<HomeShelf> {
-            val songs = diverseDiscovery(batches, excluded)
-            return if (songs.isEmpty()) emptyList() else listOf(HomeShelf(
-                title = "Made for you",
-                subtitle = if (learned.isNotEmpty()) "Your listening and music taste, mixed with broader discoveries" else "Your music taste, mixed with broader discoveries",
-                items = songs.map { ShelfItem(it.title, it.artist, it.thumbnailUrl, it.videoId, null) },
-            ))
-        }
+        val learned = listening?.songs.orEmpty().filter { it.ms >= 30_000 }.sortedByDescending { it.ms }.map { it.song }
+        val candidates = (favourites + learned).filter { it.videoId !in excluded && it.localUri == null && it.localPath == null }
+            .distinctBy { it.videoId }.take(6)
+        val offset = if (candidates.isEmpty()) 0 else (java.time.LocalDate.now().toEpochDay() % candidates.size).toInt()
+        val seeds = (candidates.drop(offset) + candidates.take(offset)).take(2)
+        val queries = personalDiscoveryQueries(taste, learned.map { it.artist })
+        val personal = mutableListOf<List<Song>>()
+        val fresh = mutableListOf<List<Song>>()
+        val lock = Any()
+        fun shelves() = discoveryShelves(personal, fresh, excluded, seeds)
         coroutineScope {
-            personalDiscoveryQueries(taste, learned).map { query -> async {
-                // Publish the first useful catalogue response; don't wait for an
-                // extra radio request per query or the slowest search to paint Home.
+            val searches = (queries.dropLast(1).take(2).map { it to false } + (queries.last() to true)).map { (query, broader) -> async {
                 val songs = withTimeoutOrNull(8_000L) {
                     search(query, SearchFilter.SONGS).getOrNull().orEmpty()
                         .filterIsInstance<SearchResult.Track>().map { it.song }.take(30)
                 }.orEmpty()
-                synchronized(batches) {
-                    batches += songs
+                synchronized(lock) {
+                    (if (broader) fresh else personal).add(songs)
                     shelves().takeIf { it.isNotEmpty() }?.let(onPartial)
                 }
-            } }.awaitAll()
+            } }
+            val radios = seeds.map { seed -> async {
+                val songs = withTimeoutOrNull(8_000L) { radio(seed.videoId).getOrNull() }.orEmpty()
+                synchronized(lock) {
+                    personal.add(songs)
+                    shelves().takeIf { it.isNotEmpty() }?.let(onPartial)
+                }
+            } }
+            (searches + radios).awaitAll()
         }
         shelves()
     }

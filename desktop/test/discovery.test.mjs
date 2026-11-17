@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {discoveryQueries,diverseTracks,listeningTaste} from '../model.mjs';
+import {discoveryQueries,diverseTracks,listeningTaste,discoverySeeds,discoveryShelves} from '../model.mjs';
 const song=(n,title=`Song ${n}`,artist=`Artist ${n}`)=>({id:String(n).padStart(11,'0'),title,artist});
 test('discovery requires explicit preferences and bounds untrusted IPC input',()=>{
   assert.deepEqual(discoveryQueries({language:'',artists:'',genres:''}),[]);
@@ -21,4 +21,17 @@ test('listening seeds favour qualified plays and favourites while early skips re
   assert.equal(listeningTaste(taste,signals,[{...song(3,'Local','Private file'),local:true}]).artists,'Chosen, Replayed');
   assert.equal(listeningTaste(taste,[],[]).artists,'Chosen');
   assert.equal(listeningTaste(taste,[{id:song(1).id,artist:'Bad score',plays:NaN,skips:0}],[]).artists,'Chosen');
+});
+
+test('home removes long compilations and alternate versions, and keeps fresh discoveries separate',()=>{
+  const original=song(1,'Hello (Official Audio)','A');
+  const tracks=diverseTracks([[original,song(2,'Hello - Slowed','A'),song(3,'Hello (Cover)','B'),{...song(4),duration:3600},song(5,'Full Album 2026'),{...song(6),discoveryGroup:'fresh'}]],[],24);
+  assert.deepEqual(tracks.map(t=>t.id),[original.id,song(6).id]);
+  assert.deepEqual(discoveryShelves(tracks).map(s=>[s.title,s.tracks.length]),[['Made for you',1],['Fresh discoveries',1]]);
+});
+test('home rotates only positive song seeds and excludes local favourites and skipped songs',()=>{
+  const signals=[{id:song(1).id,plays:5,skips:0},{id:song(2).id,plays:1,skips:5},{id:song(3).id,plays:2,skips:0}];
+  assert.deepEqual(discoverySeeds(signals,[{...song(4),local:true}],0),[song(1).id]);
+  assert.deepEqual(discoverySeeds(signals,[],1),[song(3).id]);
+  assert.deepEqual(discoverySeeds([],[],3),[]);
 });

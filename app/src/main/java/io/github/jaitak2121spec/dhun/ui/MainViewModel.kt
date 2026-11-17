@@ -1427,7 +1427,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val taste = AppSettings.discoveryTaste.value
         viewModelScope.launch {
             try {
-                val result = YtMusicRepository.discovery(taste, discoveryExclusions()) { shelves ->
+                val result = YtMusicRepository.discovery(taste, discoveryExclusions(), discoveryFavourites()) { shelves ->
                     if (isCurrentHomeLoad(identity, generation)) _home.value = UiState.Success(shelves)
                 }
                 if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
@@ -1449,6 +1449,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun isCurrentHomeLoad(identity: String?, generation: Long) =
         identity == listenerKey() && generation == homeLoadGeneration.get()
+
+    private fun discoveryFavourites(): List<Song> = (_library.value as? UiState.Success)?.data?.likedSongs.orEmpty()
+        .filter { likeStatusOf(it.videoId) == LikeStatus.LIKE }
 
     private fun discoveryExclusions(): Set<String> = likeStatuses.value
         .filterValues { it == io.github.jaitak2121spec.dhun.data.model.LikeStatus.DISLIKE }.keys
@@ -1477,7 +1480,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _homePendingShelves.value = 0
         _homeRecentlyPlayedLoading.value = false
         homeContinuation = null
-        val result = YtMusicRepository.discovery(AppSettings.discoveryTaste.value, discoveryExclusions())
+        val result = YtMusicRepository.discovery(AppSettings.discoveryTaste.value, discoveryExclusions(), discoveryFavourites())
         if (isCurrentHomeLoad(identity, generation)) _home.value = result.fold(
             onSuccess = { UiState.Success(it) }, onFailure = { UiState.Error(it.friendly()) },
         )

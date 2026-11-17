@@ -11,12 +11,23 @@ import org.junit.Test
 
 class DiscoveryTest {
     @Test fun `personal queries keep cold start discovery and blend bounded learned seeds`() {
-        assertEquals(listOf("new music discoveries"), io.github.jaitak2121spec.dhun.data.personalDiscoveryQueries(DiscoveryTaste(), emptyList()))
+        assertEquals(listOf("popular songs official audio"), io.github.jaitak2121spec.dhun.data.personalDiscoveryQueries(DiscoveryTaste(), emptyList()))
         val queries = io.github.jaitak2121spec.dhun.data.personalDiscoveryQueries(DiscoveryTaste("Hindi", "Chosen", "acoustic"), listOf("Replayed", "replayed", "New artist", "Overflow"))
         assertEquals(4, queries.size)
         assertTrue(queries.any { it.startsWith("Replayed ") })
-        assertTrue(queries.last().contains("new music discoveries"))
+        assertTrue(queries.last().contains("new releases songs official audio"))
         assertTrue(queries.none { it.contains("Overflow") })
+    }
+
+    @Test fun `home separates discovery and removes seed families long mixes and cross shelf repeats`() {
+        val seed = song(1, "Hello", "A")
+        val shelves = io.github.jaitak2121spec.dhun.data.discoveryShelves(
+            listOf(listOf(seed, song(2,"Hello - Slowed","A"),song(3))),
+            listOf(listOf(song(3), song(4),song(5,"Full Album"),song(6).copy(durationText="1:00:00"))),
+            seeds = listOf(seed),
+        )
+        assertEquals(listOf("Made for you", "Fresh discoveries"), shelves.map { it.title })
+        assertEquals(listOf(song(3).videoId, song(4).videoId), shelves.flatMap { it.items }.map { it.videoId })
     }
 
     private fun song(id: Int, title: String = "Song $id", artist: String = "Artist $id") = Song(id.toString().padStart(11, '0'), title, artist, null)

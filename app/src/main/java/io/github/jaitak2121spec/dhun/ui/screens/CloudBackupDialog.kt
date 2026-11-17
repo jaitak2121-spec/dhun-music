@@ -85,19 +85,19 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (!connected) {
-                    Text("Your music, with a little more you.")
+                    Text("Make Dhun yours.")
                     Spacer(Modifier.height(12.dp))
-                    Text("Continue with Google to create or connect your Dhun account using your name, email and available profile photo.")
+                    Text("Dhun saves your name, email and profile photo for your account.")
                     Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     TextButton(enabled = !busy, onClick = { perform {
-                        message = "Opening secure browser sign-in…"
+                        message = "Opening Google…"
                         val data = cloud.start()
                         message = "Finish signing in. You’ll return to Dhun automatically."
                         CustomTabsIntent.Builder().setShowTitle(true).build()
                             .launchUrl(context, Uri.parse(data.getString("verificationUrl")))
                         awaitSignIn()
-                    } }) { Text(if (busy) "Waiting for browser sign-in…" else "Continue with Google") }
+                    } }) { Text(if (busy) "Signing in…" else "Continue with Google") }
                 } else {
                     Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())

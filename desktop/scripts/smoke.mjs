@@ -127,7 +127,7 @@ try {
   await page.getByRole('button',{name:'Fine-tune your music taste',exact:true}).click();
   await expect(page.getByLabel('Music language',{exact:true})).toHaveValue('English');
   await page.getByRole('button',{name:'Reset preferences and hidden songs',exact:true}).click();
-  await expect(page.locator('#discovery-tracks li')).toHaveCount(2);
+  await expect(page.locator('#discovery-tracks .track')).toHaveCount(2);
   await application.evaluate(({ipcMain})=>{
     ipcMain.removeHandler('dhun:suggest');ipcMain.removeHandler('dhun:search');
     ipcMain.handle('dhun:suggest',async(_event,query)=>{

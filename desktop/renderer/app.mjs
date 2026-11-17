@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { nextIndex,discoveryQueries,diverseTracks,listeningTaste,stationTracks } from './model.mjs';
+import { nextIndex,discoveryQueries,diverseTracks,listeningTaste,stationTracks,discoverySeeds,discoveryShelves } from './model.mjs';
 import {mergeSuggestions} from './search-suggestions.mjs';
 const $ = selector => document.querySelector(selector);
 const icons = {
@@ -127,10 +127,15 @@ let discoveryResults=storedTracks('discovery-cache'),discoveryGeneration=0;
 let hiddenSuggestions=read('hidden-suggestions',[]);
 if(!Array.isArray(hiddenSuggestions))hiddenSuggestions=[];
 hiddenSuggestions=hiddenSuggestions.filter(id=>typeof id==='string'&&/^[A-Za-z0-9_-]{11}$/.test(id)).slice(-500);
+function discoveryExclusions(){
+  return [...hiddenSuggestions,...(useListening?listeningSignals.filter(s=>s.skips>=2&&s.skips>=(s.plays||0)).map(s=>s.id):[])];
+}
 function renderDiscovery(){
   const list=$('#discovery-tracks');list.replaceChildren();
-  const tracks=diverseTracks([discoveryResults],hiddenSuggestions);
-  for(const [index,track] of tracks.entries()){
+  for(const shelf of discoveryShelves(discoveryResults,discoveryExclusions())){
+    const section=node('li','discovery-shelf');section.append(node('h3','',shelf.title));
+    const rows=node('ol','');rows.setAttribute('aria-label',shelf.title);section.append(rows);list.append(section);
+    for(const track of shelf.tracks){
     const row=node('li','track');const play=node('button','track-play');play.setAttribute('aria-label',`Play recommendation ${track.title}`);
     const copy=node('span','track-copy');copy.append(node('strong','',track.title),node('span','',track.artist));play.append(artwork(track),copy);
     play.addEventListener('click',safe(async()=>{await startStation(track);}));
@@ -141,7 +146,8 @@ function renderDiscovery(){
       hiddenSuggestions=next;renderDiscovery();
       $('#discovery-status').textContent='Song hidden on this device. Refresh for other suggestions, or reset hidden songs in your music taste settings.';
     });
-    row.append(play,node('span','track-time',track.duration?time(track.duration):'—'),heart,dismiss);list.append(row);
+    row.append(play,node('span','track-time',track.duration?time(track.duration):'—'),heart,dismiss);rows.append(row);
+    }
   }
 }
 async function loadDiscovery(){
@@ -152,10 +158,11 @@ async function loadDiscovery(){
   $('#discovery-refresh').disabled=true;
   $('#discovery-status').textContent='Finding music based on your choices…';
   try{
-    const tracks=await request('recommendations',useListening?listeningTaste(discoveryTaste,listeningSignals,state.favourites):discoveryTaste);
+    const seeds=useListening?discoverySeeds(listeningSignals.filter(s=>!discoveryExclusions().includes(s.id)),state.favourites.filter(s=>!hiddenSuggestions.includes(s.id))):[];
+    const tracks=await request('recommendations',useListening?listeningTaste(discoveryTaste,listeningSignals,state.favourites):discoveryTaste,seeds);
     if(generation!==discoveryGeneration)return;
-    discoveryResults=diverseTracks([tracks],hiddenSuggestions);save('discovery-cache',discoveryResults);renderDiscovery();
-    $('#discovery-status').textContent=discoveryResults.length?'Your music taste and qualified listening, blended with broader discoveries. Listening signals stay on this device.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
+    discoveryResults=diverseTracks([tracks],discoveryExclusions(),24);save('discovery-cache',discoveryResults);renderDiscovery();
+    $('#discovery-status').textContent=discoveryResults.length?'Familiar sounds, new favourites. Fine-tune your taste anytime.':'No new matches right now. Try another artist or genre, or reset hidden songs.';
   }catch(error){if(generation===discoveryGeneration)$('#discovery-status').textContent=`Recommendations unavailable: ${error.message} Your music library is unchanged.`;}
   finally{if(generation===discoveryGeneration){$('#discovery-loading').hidden=true;$('#discovery-refresh').disabled=false;}}
 }

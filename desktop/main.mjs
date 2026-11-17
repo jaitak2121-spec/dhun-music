@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks, RELEASES } from './model.mjs';
+import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks, stationTracks, RELEASES } from './model.mjs';
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
 import { cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
@@ -137,21 +137,25 @@ handle('radio', async id => {
   if (!validId(id)) throw Error('Invalid station seed.');
   return tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--yes-playlist','--playlist-end','30','--dump-single-json','--',`https://www.youtube.com/watch?v=${id}&list=RD${id}`],false,20000)));
 });
-handle('recommendations', async taste => {
-  const queries=[...discoveryQueries(taste),[taste.language,taste.genres,'new music discoveries'].filter(Boolean).join(' ')],generation=++discoveryGeneration,batches=[];
+handle('recommendations', async (taste, seeds = []) => {
+  const queries=discoveryQueries(taste),generation=++discoveryGeneration;
+  if(!Array.isArray(seeds)||seeds.length>1||seeds.some(id=>!validId(id)))throw Error('Invalid discovery seed.');
+  const context=[taste.language.trim(),taste.genres.trim()].filter(Boolean).join(' ');
+  const fresh=[context,context?'new releases songs official audio':'popular songs official audio'].filter(Boolean).join(' ');
+  // Two processes leave capacity for playback. A related-song station replaces generic artist searches.
+  const jobs=[seeds.length?{radio:seeds[0]}:{query:queries[0]||fresh}, {query:fresh,fresh:true}];
+  if(!seeds.length&&!queries.length)jobs.splice(0,1);
   let failure;
-  // Two catalogue processes at once leave capacity for actual audio playback.
-  for(let i=0;i<queries.length;i+=2){
-    if(generation!==discoveryGeneration)return[];
-    const results=await Promise.all(queries.slice(i,i+2).map(async query=>{
-      try{return tracksFromSearch(JSON.parse(await extract(['--flat-playlist','--dump-single-json','--',`ytsearch12:${query}`],false,12000)));}
-      catch(error){failure=error;return[];}
-    }));
-    batches.push(...results.filter(batch=>batch.length));
-  }
+  const batches=await Promise.all(jobs.map(async job=>{
+    try{
+      const args=job.radio?['--flat-playlist','--yes-playlist','--playlist-end','30','--dump-single-json','--',`https://www.youtube.com/watch?v=${job.radio}&list=RD${job.radio}`]:['--flat-playlist','--dump-single-json','--',`ytsearch20:${job.query}`];
+      const tracks=tracksFromSearch(JSON.parse(await extract(args,false,12000))),seed=tracks.find(track=>track.id===job.radio);
+      return (seed?stationTracks(seed,[],tracks,18):tracks).filter(track=>!seeds.includes(track.id)).map(track=>({...track,discoveryGroup:job.fresh?'fresh':'personal'}));
+    }catch(error){failure=error;return[];}
+  }));
   if(generation!==discoveryGeneration)return[];
-  if(!batches.length&&failure)throw failure;
-  return diverseTracks(batches);
+  if(!batches.some(batch=>batch.length)&&failure)throw failure;
+  return diverseTracks(batches,[],24);
 });
 async function bufferStream(id) {
   if (!validId(id)) throw Error('Invalid track. Search for it again.');

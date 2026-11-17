@@ -32,11 +32,11 @@ export function diverseTracks(batches, excluded = [], limit = 12) {
   if(limit<=0)return[];
   const ids=new Set(excluded),recordings=new Set(),artists=new Map(),result=[];
   for(let i=0;i<Math.max(0,...batches.map(batch=>batch.length));i++)for(const batch of batches){
-    const track=batch[i];if(!track||track.local||!validId(track.id)||typeof track.title!=='string'||typeof track.artist!=='string')continue;
+    const track=batch[i];if(!track||track.local||(track.duration||0)>=900||/\b(?:full album|non[ -]?stop|compilation|jukebox|playlist|megamix|\d+\s*(?:hour|hr)s?)\b/i.test(track.title)||!validId(track.id)||typeof track.title!=='string'||typeof track.artist!=='string')continue;
     const artist=track.artist.toLocaleLowerCase().replace(/\s*-\s*topic$|vevo$|official$/gi,'').trim();
-    const title=track.title.toLocaleLowerCase().replace(/\([^)]*(?:official|lyrics?|audio|video)[^)]*\)|\[[^\]]*(?:official|lyrics?|audio|video)[^\]]*\]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    const title=recommendationTitle(track.title,track.artist);
     const recording=`${artist}:${title}`;
-    if(ids.has(track.id)||recordings.has(recording)||(artists.get(artist)||0)>=3)continue;
+    if(ids.has(track.id)||recordings.has(recording)||result.some(old=>recommendationTitle(old.title,old.artist)===title&&/\b(?:cover|remix|slowed|sped[ -]?up|reverb|nightcore)\b/i.test(old.title+' '+track.title))||(artists.get(artist)||0)>=3)continue;
     ids.add(track.id);recordings.add(recording);artists.set(artist,(artists.get(artist)||0)+1);result.push(track);
     if(result.length>=limit)return result;
   }
@@ -84,4 +84,23 @@ export function stationTracks(seed, existing, candidates, limit=10) {
     remaining.splice(remaining.indexOf(track),1);previous=artistKey(track.artist);counts.set(previous,(counts.get(previous)||0)+1);taken.push(track);result.push(track);
   }
   return result;
+}
+
+/** Qualified listening chooses a rotating song seed; repeated early skips are excluded. */
+export function discoverySeeds(signals = [], favourites = [], day = Math.floor(Date.now()/86400000)) {
+  const scores = new Map();
+  for (const entry of (Array.isArray(signals)?signals:[]).slice(0,200)) {
+    if(entry && validId(entry.id)) scores.set(entry.id, Math.min(20,Math.max(0,Number(entry.plays)||0))-Math.min(20,Math.max(0,Number(entry.skips)||0)));
+  }
+  for (const track of (Array.isArray(favourites)?favourites:[]).slice(0,1000)) if(track&&!track.local&&validId(track.id)) scores.set(track.id,(scores.get(track.id)||0)+3);
+  const ids=[...scores].filter(([,score])=>score>0).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id])=>id);
+  return ids.length?[ids[Math.abs(Math.trunc(day))%ids.length]]:[];
+}
+
+export function discoveryShelves(tracks, excluded = []) {
+  const clean=diverseTracks([tracks],excluded,24);
+  return [
+    {title:'Made for you',tracks:clean.filter(track=>track.discoveryGroup!=='fresh').slice(0,12)},
+    {title:'Fresh discoveries',tracks:clean.filter(track=>track.discoveryGroup==='fresh').slice(0,12)},
+  ].filter(shelf=>shelf.tracks.length);
 }
