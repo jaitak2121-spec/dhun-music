@@ -97,7 +97,7 @@ jobs:
           mv apk/app-dev-universal-debug.apk apk/Dhun.apk
           TAG="preview-${GITHUB_RUN_NUMBER}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" apk/Dhun.apk --clobber
+            gh release download "$TAG" --pattern Dhun.apk --dir apk --clobber
           else
             gh release create "$TAG" apk/Dhun.apk --target "$GITHUB_SHA" \
               --prerelease --title "Dhun preview ${GITHUB_RUN_NUMBER}" \

@@ -1,3 +1,5 @@
+import {cookies} from 'next/headers';
+import {approvalCookie,browserApproval,hasBrowserApproval} from '../../../../lib/browser-connection.mjs';
 import { activity, usageOverview } from '../../../../lib/activity.mjs';
 import { db, asUser } from '../../../../lib/db.mjs';
 import { ApiError, POLICY_VERSION, validateBackup } from '../../../../lib/domain.mjs';
@@ -15,7 +17,7 @@ export async function GET(request, context) {
       try { const user = await identity(); return { csrf, user: { name: user.name, email: user.email, verified: user.emailVerified, owner: isOwner(user) } }; }
       catch (error) { if (error.status === 401) return { csrf, user: null }; throw error; }
     }
-    if (action === 'connect-info') { await verifiedIdentity(); await limit(request,'connection-info',30); return connectionInfo(new URL(request.url).searchParams.get('code')); }
+    if (action === 'connect-info') { await verifiedIdentity(); await limit(request,'connection-info',30); const code=new URL(request.url).searchParams.get('code');const info=await connectionInfo(code);return {...info,canFinish:info.handoff_required&&hasBrowserApproval((await cookies()).get(approvalCookie)?.value,code)}; }
     const user = ['device-backup','device-account'].includes(action) ? await deviceIdentity(request) : await verifiedIdentity(); const sql = db();
     if (action === 'device-account') return { account: { id: user.id, name: user.name, email: user.email } };
     if (action === 'usage') {
@@ -43,13 +45,27 @@ export async function POST(request, context) {
       await limit(request,'activity',60);
       return activity(await jsonBody(request,1024),action === 'activity-erase');
     }
-    if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name);return{...result,verificationUrl:`${publicOrigin()}/?connect=${result.userCode}`}; }
-    if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode); }
+    if(action==='connect-begin'){
+      await csrfCheck(request);await limit(request,'connection-begin',20);
+      const body=await jsonBody(request,1024),info=await connectionInfo(body.code);
+      if(!info.handoff_required||body.agree!==true||body.policyVersion!==POLICY_VERSION)throw new ApiError(400,'Start sign-in from Dhun.');
+      (await cookies()).set(approvalCookie,browserApproval(body.code),{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:300});
+      return{ok:true};
+    }
+    if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name,body.handoff??false);return{...result,verificationUrl:body.handoff?`${publicOrigin()}/connect?code=${result.userCode}`:`${publicOrigin()}/?connect=${result.userCode}`}; }
+    if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode,body.grant); }
     const native = ['device-backup','device-disconnect'].includes(action);
     if(!native)await csrfCheck(request);
     await limit(request, 'data', 60);
     const user = native ? await deviceIdentity(request) : action === 'delete-account' ? await identity() : await verifiedIdentity();
     const body = await jsonBody(request); const sql = db();
+    if(action==='connect-complete'){
+      const jar=await cookies();
+      if(!hasBrowserApproval(jar.get(approvalCookie)?.value,body.code))throw new ApiError(403,'Tap Continue with Google to start sign-in again.');
+      const result=await approveConnection(user,body.code,true,POLICY_VERSION,true);
+      jar.delete(approvalCookie);
+      return result;
+    }
     if(action === 'connect-approve')return approveConnection(user,body.code,body.agree,body.policyVersion);
     if(action === 'device-disconnect'){await asUser(user.id,[sql`DELETE FROM dhun.devices WHERE id=${user.device_id}::uuid AND user_id=${user.id}::uuid`]);return{ok:true};}
     if (action === 'delete-account') {

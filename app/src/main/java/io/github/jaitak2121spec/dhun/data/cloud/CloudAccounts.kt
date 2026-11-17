@@ -25,13 +25,19 @@ class CloudAccounts(context: Context) {
         val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
         val displayName = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
         val accountReturns = kotlinx.coroutines.flow.MutableStateFlow(0)
-        fun consumeReturn(intent: Intent) {
-            // A return link only opens the account screen. The saved secret,
-            // not anything in the URL, authorizes the pending connection.
-            if (intent.action == Intent.ACTION_VIEW && intent.dataString == "dhun://account/return") {
-                accountReturns.value += 1
-            }
+        fun consumeReturn(context: Context, intent: Intent) {
+            val uri = intent.data ?: return
+            if (intent.action != Intent.ACTION_VIEW || uri.scheme != "dhun" || uri.authority != "account" || uri.path != "/return" || uri.fragment != null) return
+            val cloud = CloudAccounts(context.applicationContext)
+            val grant = uri.getQueryParameter("grant")
+            if (grant != null) {
+                if (!cloud.pending || !Regex("^[A-Za-z0-9_-]{43}$").matches(grant) || uri.queryParameterNames != setOf("grant") || uri.getQueryParameters("grant").size != 1) return
+                // A short-lived browser handoff is useless without this phone's saved secret.
+                if (runCatching { cloud.saveSecret("pendingGrant", grant) }.isFailure) return
+            } else if (uri.query != null) return
+            accountReturns.value += 1
         }
+
         const val URL = "https://dhun-cloud.vercel.app"
         private const val ALIAS = "dhun_cloud_session"
         private val http = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
@@ -88,19 +94,21 @@ class CloudAccounts(context: Context) {
     suspend fun start(): JSONObject = withContext(Dispatchers.IO) {
         check(!connected) { "Disconnect the existing account first." }
         key(true)
-        val data = request("connect-start", JSONObject().put("name", "Dhun Android browser"), false)
+        val data = request("connect-start", JSONObject().put("name", "Dhun Android browser").put("handoff", true), false)
         val code = data.getString("userCode")
-        check(Regex("^[A-F0-9]{8}$").matches(code) && data.getString("verificationUrl") == "$URL/?connect=$code") { "Invalid connection response." }
+        check(Regex("^[A-F0-9]{8}$").matches(code) && data.getString("verificationUrl") == "$URL/connect?code=$code") { "Invalid connection response." }
+        prefs.edit().remove("pendingGrant").commit()
         saveSecret("pending", data.getString("deviceCode"))
         check(prefs.edit().putLong("pendingExpires", System.currentTimeMillis() + 300_000).commit()) { "Could not save sign-in progress." }
         data
     }
     suspend fun poll(): Boolean = withContext(Dispatchers.IO) {
         check(pending) { "Sign-in expired. Start again from Dhun." }
-        val data = request("connect-poll", JSONObject().put("deviceCode", readSecret("pending")), false)
+        if (!prefs.contains("pendingGrant")) return@withContext false
+        val data = request("connect-poll", JSONObject().put("deviceCode", readSecret("pending")).put("grant", readSecret("pendingGrant")), false)
         if (data.optBoolean("pending")) false else {
             saveToken(data.getString("token"))
-            prefs.edit().remove("pending").remove("pendingExpires").commit()
+            prefs.edit().remove("pending").remove("pendingExpires").remove("pendingGrant").commit()
             true
         }
     }

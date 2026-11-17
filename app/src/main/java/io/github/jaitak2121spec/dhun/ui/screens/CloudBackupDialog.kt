@@ -2,8 +2,8 @@ package io.github.jaitak2121spec.dhun.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -12,11 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -46,8 +42,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     var connected by remember { mutableStateOf(cloud.connected) }
     var busy by remember { mutableStateOf(false) }
-    var consent by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("Backups are optional and manual. Nothing uploads automatically.") }
+        var message by remember { mutableStateOf("Backups are optional and manual. Nothing uploads automatically.") }
     var pendingUpload by remember { mutableStateOf<JSONObject?>(null) }
     var pendingRestore by remember { mutableStateOf<JSONObject?>(null) }
     fun perform(action: suspend () -> Unit) {
@@ -64,7 +59,9 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         repeat(100) {
             delay(3000)
             if (cloud.poll()) {
-                message = "Signed in to Dhun. Backups remain optional."
+                runCatching { cloud.account() }
+                connected = true
+                onDismiss()
                 return
             }
         }
@@ -87,25 +84,18 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         title = { Text("Your Dhun account") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Sign in with Google in your secure browser. After you approve this device, the browser returns to Dhun. Recommendations learn on this device; YouTube Music and backups remain optional.")
-                Spacer(Modifier.height(12.dp))
-                Text("The Dhun owner can access data you choose to store. Google credentials, listening history, audio files and local paths are excluded.")
-                Spacer(Modifier.height(12.dp))
                 if (!connected) {
-                    Text("Dhun and its account provider store your account ID, name, email and available profile photo. The Dhun owner can access account details to operate the service. Listening history, audio files and local paths are not uploaded. You can export your data or delete your account in Privacy & manage data.")
-                    Row(Modifier.fillMaxWidth().toggleable(value = consent, enabled = !busy, role = Role.Checkbox,
-                        onValueChange = { consent = it }), verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = consent, onCheckedChange = null, enabled = !busy)
-                        Text("I agree to the account privacy notice and storing these account details.")
-                    }
-                    if (!consent) Text("Accept the privacy notice above to enable Google sign-in.")
+                    Text("Your music, with a little more you.")
+                    Spacer(Modifier.height(12.dp))
+                    Text("Continue with Google to create or connect your Dhun account using your name, email and available profile photo.")
                     Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    TextButton(enabled = !busy && consent, onClick = { perform {
+                    TextButton(enabled = !busy, onClick = { perform {
                         message = "Opening secure browser sign-in…"
                         val data = cloud.start()
-                        message = "Finish Google sign-in and approve code ${data.getString("userCode")} in your browser. Dhun will reconnect automatically."
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(data.getString("verificationUrl"))))
+                        message = "Finish signing in. You’ll return to Dhun automatically."
+                        CustomTabsIntent.Builder().setShowTitle(true).build()
+                            .launchUrl(context, Uri.parse(data.getString("verificationUrl")))
                         awaitSignIn()
                     } }) { Text(if (busy) "Waiting for browser sign-in…" else "Continue with Google") }
                 } else {
@@ -145,7 +135,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                     TextButton(enabled = !busy, onClick = { perform { cloud.forget(); pendingRestore = null; pendingUpload = null; message = "Local connection removed. Server access expires within 30 days; Erase cloud backup in your account revokes all devices immediately." } }) { Text("Forget local connection") }
                 }
                 TextButton(enabled = !busy, onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CloudAccounts.URL))) }) { Text("Privacy & manage data") }
-                Text("Export, erase backups or delete your account in the portal. Connecting does not sign you in to YouTube.")
+                Text("Listening history stays on your device. Backups and usage sharing are separate choices.")
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },

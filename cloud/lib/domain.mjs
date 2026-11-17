@@ -26,5 +26,6 @@ export function validateGoogleLogin(body, origin) {
   if (body?.provider !== 'google' || body.dhunConsent !== true) throw new ApiError(400, 'Accept the account privacy notice before continuing with Google.');
   let callback;
   try { callback = new URL(body.callbackURL); } catch { throw new ApiError(400, 'Invalid sign-in return address.'); }
-  if (callback.origin !== origin || callback.pathname !== '/' || callback.hash || [...callback.searchParams.keys()].some(key => key !== 'connect') || callback.searchParams.getAll('connect').length > 1 || (callback.search && !/^[A-F0-9]{8}$/.test(callback.searchParams.get('connect') || ''))) throw new ApiError(400, 'Invalid sign-in return address.');
+  const parameter=callback.pathname==='/connect'?'code':'connect';
+  if (callback.origin !== origin || !['/','/connect'].includes(callback.pathname) || callback.hash || [...callback.searchParams.keys()].some(key => key !== parameter) || callback.searchParams.getAll(parameter).length > 1 || ((callback.search||callback.pathname==='/connect') && !/^[A-F0-9]{8}$/.test(callback.searchParams.get(parameter) || ''))) throw new ApiError(400, 'Invalid sign-in return address.');
 }

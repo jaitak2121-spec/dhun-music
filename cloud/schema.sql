@@ -107,3 +107,6 @@ CREATE TABLE IF NOT EXISTS dhun.download_clicks (
 ALTER TABLE dhun.activity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dhun.download_clicks ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON dhun.activity, dhun.download_clicks FROM PUBLIC, dhun_app;
+
+ALTER TABLE dhun.connections ADD COLUMN IF NOT EXISTS handoff_required boolean NOT NULL DEFAULT false;
+ALTER TABLE dhun.connections ADD COLUMN IF NOT EXISTS handoff_hash text;

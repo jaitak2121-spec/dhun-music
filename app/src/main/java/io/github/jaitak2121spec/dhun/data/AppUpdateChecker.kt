@@ -43,7 +43,6 @@ object AppUpdateChecker {
 
     private const val CACHE_SUBDIR = "updates"
 
-    private const val RELEASE_URL = "https://github.com/jaitak2121-spec/dhun-music/releases/tag/preview"
     private const val DOWNLOAD_ROOT = "https://github.com/jaitak2121-spec/dhun-music/releases/download/preview"
     private const val LATEST_RELEASE_URL = "$DOWNLOAD_ROOT/Android-build.json"
 
@@ -69,7 +68,7 @@ object AppUpdateChecker {
 
     suspend fun check() = withContext(Dispatchers.IO) {
         runCatching {
-            val request = Request.Builder().url(LATEST_RELEASE_URL).header("Cache-Control", "no-cache").build()
+            val request = Request.Builder().url("$LATEST_RELEASE_URL?check=${System.currentTimeMillis()}").header("Cache-Control", "no-cache").build()
             val body = Http.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null else response.body?.string()
             } ?: return@runCatching
@@ -94,7 +93,12 @@ object AppUpdateChecker {
         val version = metadata["versionName"]?.jsonPrimitive?.contentOrNull ?: return@runCatching null
         val digest = metadata["sha256"]?.jsonPrimitive?.contentOrNull?.lowercase() ?: return@runCatching null
         if (code <= currentCode || !Regex("[A-Za-z0-9._+-]{1,64}").matches(version) || !Regex("[a-f0-9]{64}").matches(digest)) return@runCatching null
-        UpdateInfo(version, RELEASE_URL, "$DOWNLOAD_ROOT/Dhun.apk", metadata["notes"]?.jsonPrimitive?.contentOrNull, digest)
+        // Versioned assets are never replaced by the next rolling preview.
+        val preview = Regex("^1\\.7\\.1-preview\\.([1-9][0-9]*)$").matchEntire(version)?.groupValues?.get(1)
+            ?: return@runCatching null
+        if (preview.toIntOrNull()?.let { it + 1000 == code } != true) return@runCatching null
+        val versionRoot = "https://github.com/jaitak2121-spec/dhun-music/releases/download/preview-$preview"
+        UpdateInfo(version, "https://dhun-cloud.vercel.app/download", "$versionRoot/Dhun.apk", metadata["notes"]?.jsonPrimitive?.contentOrNull, digest)
     }.getOrNull()
 
     /**
@@ -104,6 +108,8 @@ object AppUpdateChecker {
      * download.
      */
     suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
+        // A dialog may have remained open across several new releases. Refresh first.
+        check()
         val info = _available.value ?: return@withContext
         val url = info.apkUrl ?: return@withContext
         downloadCancelled = false
@@ -116,7 +122,7 @@ object AppUpdateChecker {
             val target = File(dir, "Dhun-update.apk")
             val digest = MessageDigest.getInstance("SHA-256")
 
-            val request = Request.Builder().url(url).build()
+            val request = Request.Builder().url(url).header("Cache-Control", "no-cache").build()
             Http.client.newCall(request).execute().use { response ->
                 check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
                 val body = response.body ?: error("Empty download body")

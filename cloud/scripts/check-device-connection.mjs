@@ -26,7 +26,17 @@ try {
     await assert.rejects(() => pollConnection(connection.deviceCode));
     await assert.rejects(() => approveConnection({ id }, connection.userCode, true, POLICY_VERSION));
   }
-  console.log('PASS: consent, Android return flag, desktop compatibility, device identity and one-time redemption.');
+  const mobile = await startConnection('Dhun Android browser',true);connections.push(mobile);
+  await assert.rejects(()=>approveConnection({id},mobile.userCode,true,POLICY_VERSION));
+  const browser = await approveConnection({id},mobile.userCode,true,POLICY_VERSION,true);
+  assert.ok(browser.grant);
+  assert.equal((await pollConnection(mobile.deviceCode)).pending,true);
+  await sql`UPDATE dhun.connections SET last_polled_at=NULL WHERE secret_hash=${tokenHash(mobile.deviceCode)}`;
+  assert.equal((await pollConnection(mobile.deviceCode,'x'.repeat(43))).pending,true);
+  await sql`UPDATE dhun.connections SET last_polled_at=NULL WHERE secret_hash=${tokenHash(mobile.deviceCode)}`;
+  const signedIn=await pollConnection(mobile.deviceCode,browser.grant);assert.ok(signedIn.token);
+  await assert.rejects(()=>pollConnection(mobile.deviceCode,browser.grant));
+  console.log('PASS: legacy compatibility, consent, phone secret + one-use browser handoff, identity and replay denial.');
 } finally {
   for (const connection of connections) await sql`DELETE FROM dhun.connections WHERE secret_hash=${tokenHash(connection.deviceCode)}`;
   if (created) await sql`DELETE FROM neon_auth."user" WHERE id=${id}::uuid`;
