@@ -135,7 +135,7 @@ fun LocalMusicScreen(
     songs: List<Song>,
     onSongClick: (List<Song>, Int) -> Unit,
     onSongLongPress: (Song) -> Unit,
-    onSongSwipe: (Song) -> Unit,
+    onSongSwipe: (Song, Boolean) -> Unit,
     onShuffle: (List<Song>) -> Unit,
     contentPadding: PaddingValues,
     /**
@@ -507,7 +507,7 @@ private fun SongsTab(
     onSongLongPress: (Song) -> Unit,
     /** The row's ⋮, where holding it does something else — see [SongRow]. */
     onSongMore: ((Song) -> Unit)? = null,
-    onSongSwipe: (Song) -> Unit,
+    onSongSwipe: (Song, Boolean) -> Unit,
     contentPadding: PaddingValues,
 ) {
     if (viewType == LibraryViewType.GRID) {
@@ -564,7 +564,7 @@ private fun SongsTab(
                     onClick = { onSongClick(songs, index) },
                     onLongPress = { onSongLongPress(song) },
                     onMore = onSongMore?.let { more -> { more(song) } },
-                    onSwipeToQueue = { onSongSwipe(song) },
+                    onSwipeToQueue = { next -> onSongSwipe(song, next) },
                 )
                 if (index < songs.lastIndex) {
                     HorizontalDivider(
@@ -1344,7 +1344,7 @@ private fun DrillDownSongList(
     onSongLongPress: (Song) -> Unit,
     /** The row's ⋮, where holding it does something else — see [SongRow]. */
     onSongMore: ((Song) -> Unit)? = null,
-    onSongSwipe: (Song) -> Unit,
+    onSongSwipe: (Song, Boolean) -> Unit,
     onShuffle: (List<Song>) -> Unit,
     /** The ⋮ in the header, acting on the whole artist or album. */
     onMore: (() -> Unit)?,
@@ -1425,7 +1425,7 @@ private fun DrillDownSongList(
                     onClick = { onSongClick(songs, index) },
                     onLongPress = { onSongLongPress(song) },
                     onMore = onSongMore?.let { more -> { more(song) } },
-                    onSwipeToQueue = { onSongSwipe(song) },
+                    onSwipeToQueue = { next -> onSongSwipe(song, next) },
                 )
                 if (index < songs.lastIndex) {
                     HorizontalDivider(

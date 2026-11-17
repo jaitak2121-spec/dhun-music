@@ -143,6 +143,14 @@ fun ListenTogetherScreen(
     onEditServer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (!ListenTogether.state.collectAsStateWithLifecycle().value.inParty) {
+        Column(modifier.fillMaxWidth().padding(contentPadding).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Listen together", style = MaterialTheme.typography.headlineLarge)
+            Text("Coming later", style = MaterialTheme.typography.titleMedium)
+            Text("Shared listening is paused while we connect it to Dhun accounts. You can keep listening and making playlists without signing in.")
+        }
+        return
+    }
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()

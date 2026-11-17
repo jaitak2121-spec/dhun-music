@@ -111,8 +111,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jaitak2121spec.dhun.auth.DiscordLoginScreen
 import io.github.jaitak2121spec.dhun.auth.LastfmAuthorizeSheet
-import io.github.jaitak2121spec.dhun.auth.WebSessionMode
-import io.github.jaitak2121spec.dhun.auth.YtMusicLoginScreen
 import io.github.jaitak2121spec.dhun.data.AppUpdateChecker
 import io.github.jaitak2121spec.dhun.data.LocalMediaRepository
 import io.github.jaitak2121spec.dhun.data.listentogether.JamInviteLink
@@ -187,7 +185,6 @@ import io.github.jaitak2121spec.dhun.ui.components.BrowseActionsSheet
 import io.github.jaitak2121spec.dhun.ui.components.BrowseTarget
 import io.github.jaitak2121spec.dhun.ui.components.ConfirmationAlert
 import io.github.jaitak2121spec.dhun.ui.components.DownloadManagerSheet
-import io.github.jaitak2121spec.dhun.ui.components.PlaylistPickerSheet
 import io.github.jaitak2121spec.dhun.ui.components.SongActionsSheet
 import androidx.media3.session.MediaController
 import io.github.jaitak2121spec.dhun.playback.QualityUpgrade
@@ -419,6 +416,9 @@ private fun DhunApp(
     val greetingVariant = remember { (System.currentTimeMillis() / 900_000L % 3).toInt() }
     var showDevicePlaylists by remember { mutableStateOf(false) }
     var devicePlaylistSong by remember { mutableStateOf<Song?>(null) }
+    var devicePlaylistId by remember { mutableStateOf<String?>(null) }
+    var createDevicePlaylist by remember { mutableStateOf(false) }
+    var showSpotifyPlaylistImport by remember { mutableStateOf(false) }
 
     val accountReturns by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.accountReturns.collectAsStateWithLifecycle()
     LaunchedEffect(accountReturns) { if (accountReturns > 0) showDhunAccount = true }
@@ -467,7 +467,6 @@ private fun DhunApp(
      * What the in-app browser is open for, or null while it is closed —
      * signing in, or picking a channel in YouTube Music's own Accounts list.
      */
-    var webSession by remember { mutableStateOf<WebSessionMode?>(null) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     // Replay: the page, the stories over it, and the share sheet over those.
     // Three states rather than one enum because they stack — the stories are
@@ -550,10 +549,8 @@ private fun DhunApp(
     // Which track the playlist picker is adding, or null when it's closed.
     // Separate from [songActions] so the menu can close behind it — the picker
     // is the next step, not a second sheet stacked on the first.
-    var playlistTarget by remember { mutableStateOf<Song?>(null) }
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
-    var creatingPlaylist by remember { mutableStateOf(false) }
     // Which album or playlist the collection menu is open on, or null when it
     // is shut. One slot for every surface that can open it — the shelves on
     // three tabs, the search rows, the artist page's carousels, the release
@@ -640,7 +637,6 @@ private fun DhunApp(
         showDiscord = false
         libraryShowAll = null
         viewModel.clearDetail()
-        webSession = null
         showSettings = true
         showListenTogether = true
         JamInviteLink.handled()
@@ -1263,9 +1259,14 @@ private fun DhunApp(
      * remixes of the same song. Album, artist and playlist pages keep [play],
      * where the surrounding list *is* the thing the user asked for.
      */
+    if (showSpotifyPlaylistImport) io.github.jaitak2121spec.dhun.ui.screens.SpotifyPlaylistImportDialog(
+        onImported = { id -> showSpotifyPlaylistImport = false; devicePlaylistId = id; devicePlaylistSong = null; showDevicePlaylists = true },
+        onDismiss = { showSpotifyPlaylistImport = false },
+    )
     if (showDevicePlaylists) io.github.jaitak2121spec.dhun.ui.screens.DevicePlaylistsDialog(
         songToAdd = devicePlaylistSong, queue = player.queue, onPlay = play,
-        onDismiss = { showDevicePlaylists = false; devicePlaylistSong = null },
+        initialPlaylistId = devicePlaylistId, startCreating = createDevicePlaylist,
+        onDismiss = { showDevicePlaylists = false; devicePlaylistSong = null; devicePlaylistId = null; createDevicePlaylist = false },
     )
 
     val playRadio: (Song, QueueSource) -> Unit = { song, source ->
@@ -1430,8 +1431,8 @@ private fun DhunApp(
             }
         }
     }
-    val onSongSwipe: (Song) -> Unit = { song ->
-        if (AppSettings.swipeToPlayNext.value) playNext(song) else addToQueue(song)
+    val onSongSwipe: (Song, Boolean) -> Unit = { song, next ->
+        if (next) playNext(song) else addToQueue(song)
     }
 
     /**
@@ -2444,7 +2445,7 @@ private fun DhunApp(
                                 // Only the Playlists shelf can grow one — see
                                 // [PlaylistShelf].
                                 onNewPlaylist = if (shelf.title == YtMusicRepository.PLAYLISTS_SHELF) {
-                                    { creatingPlaylist = true }
+                                    { devicePlaylistSong = null; createDevicePlaylist = true; showDevicePlaylists = true }
                                 } else {
                                     null
                                 },
@@ -2497,7 +2498,7 @@ private fun DhunApp(
                             onSignIn = {
                                 showAccountScrobbling = false
                                 showSettings = false
-                                webSession = WebSessionMode.SIGN_IN
+                                showDhunAccount = true
                             },
                             onSwitchChannel = {
                                 viewModel.loadChannels()
@@ -2529,7 +2530,7 @@ private fun DhunApp(
                             onSignIn = {
                                 showListenTogether = false
                                 showSettings = false
-                                webSession = WebSessionMode.SIGN_IN
+                                showDhunAccount = true
                             },
                             contentPadding = listPadding,
                             onEditServer = { editingPartyServer = true },
@@ -2543,7 +2544,7 @@ private fun DhunApp(
                             account = account,
                             onSignIn = {
                                 showSettings = false
-                                webSession = WebSessionMode.SIGN_IN
+                                showDhunAccount = true
                             },
                             onSignOut = { viewModel.signOut() },
                             onAccountScrobbling = { showAccountScrobbling = true },
@@ -2869,8 +2870,8 @@ private fun DhunApp(
                                     artworkUrl = song.thumbnailUrl,
                                     entityType = EntityType.TRACK,
                                 ))
-                                viewModel.loadPlaylists()
-                                playlistTarget = song
+                                devicePlaylistSong = song
+                                showDevicePlaylists = true
                             },
                             onBrowseClick = { item ->
                                 viewModel.recordEntity(SearchHistoryEntity(
@@ -2957,8 +2958,9 @@ private fun DhunApp(
                             // album or a Liked Music card gets. Holding an artist still
                             // does nothing; see [onBrowseLongPress].
                             onShelfItemLongPress = onBrowseLongPress,
-                            onNewPlaylist = { creatingPlaylist = true },
-                            onDevicePlaylists = { devicePlaylistSong = null; showDevicePlaylists = true },
+                            onNewPlaylist = { devicePlaylistSong = null; createDevicePlaylist = true; showDevicePlaylists = true },
+                            onImportSpotify = { showSpotifyPlaylistImport = true },
+                            onDevicePlaylists = { id -> devicePlaylistSong = null; devicePlaylistId = id; showDevicePlaylists = true },
                             onShowAll = { shelf -> libraryShowAll = shelf },
                             replayCards = replayCards,
                             replayHolder = account?.name.orEmpty(),
@@ -2967,7 +2969,7 @@ private fun DhunApp(
                                 replayLandingPage = page
                                 showReplay = true
                             },
-                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                            onSignIn = { showDhunAccount = true },
                             onRetry = viewModel::loadLibrary,
                             refreshing = MainViewModel.Feed.LIBRARY in refreshing,
                             onRefresh = { viewModel.refresh(MainViewModel.Feed.LIBRARY) },
@@ -3605,12 +3607,7 @@ private fun DhunApp(
                             controller?.seekToNextMediaItem()
                         }
                     },
-                    onAddToDevicePlaylist = { songActions = null; devicePlaylistSong = song; showDevicePlaylists = true },
-                    onAddToPlaylist = {
-                        songActions = null
-                        viewModel.loadPlaylists()
-                        playlistTarget = song
-                    },
+                    onAddToPlaylist = { songActions = null; devicePlaylistSong = song; showDevicePlaylists = true },
                     onRemoveFromPlaylist = editable?.let {
                         {
                             songActions = null
@@ -3748,46 +3745,6 @@ private fun DhunApp(
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
                 DownloadManagerSheet(onDismiss = closeDownloadManager)
-            }
-        }
-
-        // ---- Add to playlist / new playlist ----
-        // One sheet for both, because they are one decision: the list of
-        // playlists with a way to make another. `creatingPlaylist` opens it
-        // straight onto the form, which is what the Library tile means.
-        if (playlistTarget != null || creatingPlaylist) {
-            val target = playlistTarget
-            val dismiss = {
-                playlistTarget = null
-                creatingPlaylist = false
-            }
-            ModalBottomSheet(
-                onDismissRequest = dismiss,
-                containerColor = MaterialTheme.colorScheme.background,
-            ) {
-                PlaylistPickerSheet(
-                    playlists = playlists,
-                    loading = playlistsLoading,
-                    song = target,
-                    startCreating = target == null,
-                    onPick = { playlist ->
-                        target?.let { song ->
-                            viewModel.addToPlaylist(playlist, song) { alreadyInPlaylist ->
-                                showQueueNotice(
-                                    context.getString(
-                                        if (alreadyInPlaylist) R.string.song_already_in_playlist
-                                        else R.string.song_added_to_playlist,
-                                    ),
-                                )
-                            }
-                        }
-                        dismiss()
-                    },
-                    onCreate = { title, privacy ->
-                        viewModel.createPlaylist(title, privacy, target)
-                        dismiss()
-                    },
-                )
             }
         }
 
@@ -3947,94 +3904,6 @@ private fun DhunApp(
         }
 
         // ---- Google sign-in (full screen WebView) ----
-        webSession?.let { mode ->
-            BackHandler { webSession = null }
-            // Raised by "Use this channel", read by the browser as "take the
-            // session from the page as it now stands". A counter rather than a
-            // flag so a second tap, after a failed first one, is still a new
-            // request rather than a value that was already true.
-            var captureRequest by remember(mode) { mutableIntStateOf(0) }
-            var captureFailed by remember(mode) { mutableStateOf(false) }
-            var pageReady by remember(mode) { mutableStateOf(false) }
-            var confirmingProfile by remember(mode) { mutableStateOf(false) }
-            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                Column(Modifier.fillMaxSize()) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { webSession = null }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.close),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = when (mode) {
-                                    WebSessionMode.SIGN_IN -> stringResource(R.string.sign_in_youtube_music)
-                                    WebSessionMode.SWITCH_CHANNEL -> stringResource(R.string.choose_profile)
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-                            if (pageReady) {
-                                Text(
-                                    text = if (captureFailed) {
-                                         stringResource(R.string.profile_unavailable)
-                                     } else {
-                                         stringResource(R.string.switch_profile_hint)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                )
-                            }
-                        }
-                        if (pageReady) {
-                            TextButton(onClick = {
-                                captureFailed = false
-                                confirmingProfile = true
-                                captureRequest++
-                            }, enabled = !confirmingProfile) {
-                                Text(
-                                    if (confirmingProfile) stringResource(R.string.checking)
-                                    else stringResource(R.string.use_this_profile),
-                                )
-                            }
-                        }
-                    }
-                    YtMusicLoginScreen(
-                        mode = mode,
-                        initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                            googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
-                        } else null,
-                        captureRequest = captureRequest,
-                        onPageReady = { pageReady = it },
-                        onCaptureUnavailable = {
-                            confirmingProfile = false
-                            captureFailed = true
-                        },
-                        onCaptured = { session ->
-                            viewModel.onWebSession(session, mode) { accepted ->
-                                confirmingProfile = false
-                                if (accepted) {
-                                    webSession = null
-                                    if (mode == WebSessionMode.SIGN_IN) selectedTab = 2
-                                } else {
-                                    captureFailed = true
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
-
         // ---- Update available (once per launch) ----
         if (showUpdateDialog) {
             updateNotice?.let { update ->
@@ -4115,7 +3984,7 @@ private fun DhunApp(
                 onSelect = { selected, profile -> viewModel.selectProfile(selected.accountId, profile.profileId) },
                 onAddAccount = {
                     showAccountSelector = false
-                    webSession = WebSessionMode.SIGN_IN
+                    showDhunAccount = true
                 },
                 onRemoveAccount = { selected ->
                     viewModel.removeAccount(selected.accountId)

@@ -37,7 +37,7 @@ fun HistoryScreen(
     listState: LazyListState,
     onSongClick: (List<Song>, Int) -> Unit,
     onSongLongPress: (Song) -> Unit,
-    onSongSwipe: (Song) -> Unit,
+    onSongSwipe: (Song, Boolean) -> Unit,
     onRetry: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -68,7 +68,7 @@ fun HistoryScreen(
                         song = song,
                         onClick = { onSongClick(songs, index) },
                         onLongPress = { onSongLongPress(song) },
-                        onSwipeToQueue = { onSongSwipe(song) },
+                        onSwipeToQueue = { next -> onSongSwipe(song, next) },
                     )
                     if (index < songs.lastIndex) {
                         HorizontalDivider(

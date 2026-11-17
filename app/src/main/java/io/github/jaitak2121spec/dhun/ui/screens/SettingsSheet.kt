@@ -239,7 +239,6 @@ fun SettingsScreen(
     val stopOnTaskRemoved by AppSettings.stopOnTaskRemoved.collectAsStateWithLifecycle()
     val hideVolumeBar by AppSettings.hideVolumeBar.collectAsStateWithLifecycle()
     val hideSongStatus by AppSettings.hideSongStatus.collectAsStateWithLifecycle()
-    val swipeToPlayNext by AppSettings.swipeToPlayNext.collectAsStateWithLifecycle()
     val dontRepeatSuggestions by AppSettings.dontRepeatSuggestions.collectAsStateWithLifecycle()
     val preferMusicOnly by AppSettings.preferMusicOnly.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
@@ -423,21 +422,7 @@ fun SettingsScreen(
                     onClick = onAccountScrobbling,
                 )
             }
-            // Sits with the account rather than with Playback: a party is up to
-            // five signed-in people, and being signed in is the whole of what
-            // the row needs before it will do anything.
-            val listenTogetherTitle = stringResource(R.string.listen_together)
-            row(listenTogetherTitle, "jam", "party", "sync", "friends") {
-                SettingsRow(
-                    icon = Icons.Rounded.Groups,
-                    title = listenTogetherTitle,
-                    subtitle = party.code?.let {
-                        stringResource(R.string.listen_together_in_party, it)
-                    } ?: stringResource(R.string.listen_together_subtitle),
-                    badge = party.members.size.takeIf { party.inParty && it > 1 }?.toString(),
-                    onClick = onListenTogether,
-                )
-            }
+
         }
 
         // The row that used to sit at the top of this group was called
@@ -1229,28 +1214,9 @@ fun SettingsScreen(
         // No footer: it only restated the stop-on-close row's own subtitle,
         // which sits four rows above it and says the same thing in fewer words.
         SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
-            val playNextOnSwipeTitle = stringResource(R.string.play_next_on_swipe)
-            row(playNextOnSwipeTitle, "swipe", "queue") {
-                SettingsRow(
-                    icon = Icons.Rounded.PlaylistPlay,
-                    title = playNextOnSwipeTitle,
-                    subtitle = if (swipeToPlayNext) {
-                        stringResource(R.string.swipe_plays_next)
-                    } else {
-                        stringResource(R.string.swipe_adds_to_queue)
-                    },
-                    trailing = {
-                        Switch(
-                            checked = swipeToPlayNext,
-                            onCheckedChange = AppSettings::setSwipeToPlayNext,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        )
-                    },
-                    onClick = { AppSettings.setSwipeToPlayNext(!swipeToPlayNext) },
-                )
+            row("Song swipe gestures", "swipe", "queue", "next") {
+                SettingsRow(icon = Icons.Rounded.PlaylistPlay, title = "Song swipe gestures",
+                    subtitle = "Swipe right to play next. Swipe left to add to queue. Directions reverse for right-to-left layouts.")
             }
             val dontRepeatSongsTitle = stringResource(R.string.dont_repeat_songs)
             row(dontRepeatSongsTitle, "radio", "suggestions") {

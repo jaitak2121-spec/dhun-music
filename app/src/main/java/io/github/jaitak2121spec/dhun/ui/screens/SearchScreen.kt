@@ -91,7 +91,7 @@ fun SearchScreen(
     onFocusHandled: () -> Unit,
     onSongClick: (List<Song>, Int) -> Unit,
     onSongLongPress: (Song) -> Unit,
-    onSongSwipe: (Song) -> Unit,
+    onSongSwipe: (Song, Boolean) -> Unit,
     onTopResultPlay: (Song) -> Unit,
     onTopResultPlaylist: (Song) -> Unit,
     onBrowseClick: (BrowseItem) -> Unit,
@@ -273,7 +273,7 @@ fun SearchScreen(
                                         onSongClick(tracks, tracks.indexOf(row.song).coerceAtLeast(0))
                                     },
                                     onLongPress = { onSongLongPress(row.song) },
-                                    onSwipeToQueue = { onSongSwipe(row.song) },
+                                    onSwipeToQueue = { next -> onSongSwipe(row.song, next) },
                                 )
                                 is SearchResult.Browse -> BrowseRow(
                                     item = row.item,

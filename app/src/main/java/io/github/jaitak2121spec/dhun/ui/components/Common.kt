@@ -268,11 +268,19 @@ fun libraryGrid(available: Dp): LibraryGridSpec {
 /**
  * One track row, used by search, library and detail pages.
  *
- * Swiping it either way queues the track or plays it next, per
- * [AppSettings.swipeToPlayNext] — the row springs back rather than
+ * Swiping toward the end plays next; toward the start adds to the queue.
+ * The row springs back rather than
  * dismissing, since nothing is being removed. Long-press opens the actions
  * menu.
  */
+/** null means the row settled without choosing an action. */
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun songSwipePlayNext(value: SwipeToDismissBoxValue): Boolean? = when (value) {
+    SwipeToDismissBoxValue.StartToEnd -> true
+    SwipeToDismissBoxValue.EndToStart -> false
+    SwipeToDismissBoxValue.Settled -> null
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SongRow(
@@ -289,7 +297,7 @@ fun SongRow(
      * silently tick a checkbox.
      */
     onMore: (() -> Unit)? = null,
-    onSwipeToQueue: (() -> Unit)? = null,
+    onSwipeToQueue: ((Boolean) -> Unit)? = null,
     /**
      * What the row paints over the swipe reveal as it slides back.
      *
@@ -339,12 +347,13 @@ fun SongRow(
 
     val swipeState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            if (value != SwipeToDismissBoxValue.Settled && currentOnSwipeToQueue != null) {
+            val playNext = songSwipePlayNext(value)
+            if (playNext != null && currentOnSwipeToQueue != null) {
                 val offset = try { swipeStateHolder.value?.requireOffset() ?: 0f } catch (e: Exception) { 0f }
                 // Only queue if the physical drag reached half the box width, ignoring short accidental flings.
                 if (abs(offset) >= boxWidth * 0.45f) {
                     haptics.play(Haptic.Select)
-                    currentOnSwipeToQueue?.invoke()
+                    currentOnSwipeToQueue?.invoke(playNext)
                 }
             }
             false // never actually dismiss; snap back
@@ -420,7 +429,6 @@ fun SongRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState) {
-    val playNext by AppSettings.swipeToPlayNext.collectAsStateWithLifecycle()
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -441,8 +449,8 @@ private fun QueueSwipeBackground(swipeState: SwipeToDismissBoxState) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        QueueSwipeLabel(playNext)
-        QueueSwipeLabel(playNext)
+        QueueSwipeLabel(true)
+        QueueSwipeLabel(false)
     }
 }
 

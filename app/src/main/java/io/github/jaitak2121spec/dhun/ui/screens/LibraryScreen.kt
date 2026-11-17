@@ -88,7 +88,8 @@ fun LibraryScreen(
     onShelfItemClick: (ShelfItem) -> Unit,
     onShelfItemLongPress: (ShelfItem) -> Unit,
     onNewPlaylist: () -> Unit,
-    onDevicePlaylists: (() -> Unit)? = null,
+    onImportSpotify: () -> Unit,
+    onDevicePlaylists: ((String?) -> Unit)? = null,
     /**
      * A shelf's "Show all" — every shelf's row here stops at five cards (see
      * [LibraryGridShelf]), so this is the only way to reach whatever didn't
@@ -123,6 +124,7 @@ fun LibraryScreen(
      */
     downloadedPlaylists: List<SavedCollection> = emptyList(),
 ) {
+    val devicePlaylists by io.github.jaitak2121spec.dhun.data.DevicePlaylists.playlists.collectAsStateWithLifecycle()
     val pinnedPlaylists by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
     val onDevice = stringResource(R.string.on_device)
     PullToRefresh(
@@ -147,9 +149,21 @@ fun LibraryScreen(
             // Drawn whether or not anything has been played: with nothing behind
             // it the page still has to say the feature exists, or the only way
             // to discover it is to have already used it.
-            if (onDevicePlaylists != null) item(key = "device-playlists") {
-                androidx.compose.material3.TextButton(onClick = onDevicePlaylists, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) {
-                    Text("Your playlists · On this device")
+            if (onDevicePlaylists != null) {
+                item(key = "device-playlists") {
+                    Text("Playlists", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 12.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        PlaylistActionCard(label = "New playlist", subtitle = "Saved in Dhun", symbol = "+", modifier = Modifier.weight(1f), onClick = onNewPlaylist)
+                        PlaylistActionCard(label = "Import Spotify", subtitle = "From a public playlist link", symbol = "↓", modifier = Modifier.weight(1f), onClick = onImportSpotify)
+                    }
+                    if (devicePlaylists.isNotEmpty()) LibraryGridShelf(
+                        shelf = HomeShelf("Saved on this device", devicePlaylists.map { list ->
+                            ShelfItem(list.title, "${list.songs.size} songs", list.songs.firstOrNull()?.thumbnailUrl, null, list.id)
+                        }),
+                        onItemClick = { onDevicePlaylists(it.browseId) },
+                        onItemLongPress = { onDevicePlaylists(it.browseId) },
+                        onShowAll = { onDevicePlaylists(null) },
+                    )
                 }
             }
             item(key = "replay") {
@@ -249,9 +263,9 @@ fun LibraryScreen(
             if (!signedIn) {
                 item {
                     MessageState(
-                        message = stringResource(R.string.library_sign_in_description),
-                        actionLabel = stringResource(R.string.sign_in),
-                        onAction = onSignIn,
+                        message = "Build your own playlists, add songs and take your music offline. No sign-in needed.",
+                        actionLabel = "Create a playlist",
+                        onAction = onNewPlaylist,
                     )
                 }
                 return@LazyColumn
@@ -577,3 +591,14 @@ private fun HomeShelf.sortedForLibrary(sort: LibrarySort): HomeShelf = when (sor
 
 /** The library feed whose cards are the account's own — see [PlaylistShelf]. */
 private const val PLAYLISTS = YtMusicRepository.PLAYLISTS_SHELF
+
+@Composable
+private fun PlaylistActionCard(label: String, subtitle: String, symbol: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.fillMaxWidth().size(96.dp), contentAlignment = Alignment.Center) {
+            Text(symbol, style = MaterialTheme.typography.displayMedium)
+        }
+        Text(label, style = MaterialTheme.typography.titleMedium)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}

@@ -137,7 +137,6 @@ fun SongActionsSheet(
     onToggleLike: () -> Unit,
     onToggleDislike: () -> Unit,
     onAddToPlaylist: () -> Unit,
-    onAddToDevicePlaylist: (() -> Unit)? = null,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -256,9 +255,7 @@ fun SongActionsSheet(
             )
         }
 
-        onAddToDevicePlaylist?.let { action ->
-            ActionRow(icon = Icons.AutoMirrored.Rounded.PlaylistAdd, label = "Add to device playlist", accent = palette.accent, onClick = action)
-        }
+        ActionRow(icon = Icons.AutoMirrored.Rounded.PlaylistAdd, label = stringResource(R.string.add_to_playlist), accent = palette.accent, onClick = onAddToPlaylist)
         if (signedIn && !isOffline) {
             ActionRow(
                 icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
@@ -273,12 +270,6 @@ fun SongActionsSheet(
                 tint = if (disliked) palette.accent else null,
                 accent = palette.accent,
                 onClick = onToggleDislike,
-            )
-            ActionRow(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                label = stringResource(R.string.add_to_playlist),
-                accent = palette.accent,
-                onClick = onAddToPlaylist,
             )
             onRemoveFromPlaylist?.let {
                 ActionRow(
