@@ -58,12 +58,12 @@ export default function Download() {
           <article className={styles.platform}>
             <span className={styles.platformIndex}>01 / MOBILE</span><h3>Android</h3><p>Android 8.0+ · ARM phones</p>
             <a className={styles.installer} href="/api/download/android">Download APK <Arrow/></a>
-            <small>Open the APK, allow installation from your browser when prompted, then install.</small>
+            <small>Open the APK, allow installation from your browser when prompted, then install.</small><a className={styles.setupLink} href="#android-setup">How to install on Android <span aria-hidden="true">↓</span></a>
           </article>
           <article className={styles.platform}>
             <span className={styles.platformIndex}>02 / DESKTOP</span><h3>Windows</h3><p>Windows 10+ · 64-bit</p>
             <a className={styles.installer} href="/api/download/windows">Download EXE <Arrow/></a>
-            <small>Download and run the installer. Desktop previews are unsigned; Windows may show a warning.</small>
+            <small>Download and run the installer. Desktop previews are unsigned; Windows may show a warning.</small><a className={styles.setupLink} href="#windows-setup">How to install on Windows <span aria-hidden="true">↓</span></a>
           </article>
           <article className={styles.platform}>
             <span className={styles.platformIndex}>03 / DESKTOP</span><h3>Mac</h3><p>macOS 12+ · Choose your chip</p>
@@ -73,6 +73,34 @@ export default function Download() {
         </div>
         <p className={styles.downloadNote}>Direct installers, without ZIP extraction. These links always point to the latest published previews. Desktop features currently differ from Android.</p>
       </section>
+      <div className={styles.deviceGuides}>
+        <section className={styles.deviceGuide} aria-labelledby="android-setup">
+          <p className={styles.eyebrow}>YOUR FIRST LISTEN ON ANDROID</p><h2 id="android-setup" tabIndex={-1}>Set up on Android.</h2>
+          <p className={styles.setupIntro}>Android 8.0+ · Direct APK installation. Menu names can vary by phone.</p>
+          <ol className={styles.setupSteps}>
+            <li><strong>Download the APK from this page.</strong><p>Tap Download APK above. Read any browser warning before choosing whether to continue. Find the completed file in your browser’s Downloads.</p></li>
+            <li><strong>Allow this installation source.</strong><p>Open Dhun.apk. If Android asks, tap Settings and enable Allow from this source for the browser or Files app you used to open it.</p></li>
+            <li><strong>Install and open Dhun.</strong><p>Return to the installer, tap Install, then Open. If Play Protect offers to scan the app, let it complete.</p></li>
+            <li><strong>Turn the source permission off afterward.</strong><p>In Settings → Apps → Special app access → Install unknown apps, select that browser or Files app and turn off Allow from this source. Dhun will still open normally.</p></li>
+          </ol>
+          <details className={styles.setupDetails}><summary>Updating your existing Dhun app</summary><p>Install the new APK over your existing app to keep local playlists and settings. In-app updates may separately ask you to allow installations from Dhun itself. If update verification fails, download a fresh APK here. If Android reports a conflicting signature or an incompatible package, keep the existing app and <a href="https://github.com/jaitak2121-spec/dhun-music/issues">contact support</a> before uninstalling.</p></details>
+          <p className={styles.setupNote}>Keep Play Protect enabled. A browser file warning and a Play Protect threat detection are different messages. If Play Protect identifies Dhun as harmful or blocks it for security reasons, stop and report the exact alert.</p>
+          <a className={styles.setupSource} href="https://support.google.com/pixelphone/answer/7391672?hl=en" target="_blank" rel="noopener noreferrer">Google’s installation guidance ↗</a><br/><a className={styles.setupSource} href="https://support.google.com/accounts/answer/2812853?hl=en" target="_blank" rel="noopener noreferrer">About Google Play Protect ↗</a>
+        </section>
+        <section className={styles.deviceGuide} aria-labelledby="windows-setup">
+          <p className={styles.eyebrow}>YOUR FIRST LISTEN ON WINDOWS</p><h2 id="windows-setup" tabIndex={-1}>Set up on Windows.</h2>
+          <p className={styles.setupIntro}>Windows 10+ · 64-bit. This desktop preview does not have a verified publisher signature.</p>
+          <ol className={styles.setupSteps}>
+            <li><strong>Download the Windows installer.</strong><p>Choose Download EXE above. Save Dhun-Windows-x64.exe, then open File Explorer → Downloads.</p></li>
+            <li><strong>Open the installer.</strong><p>Double-click Dhun-Windows-x64.exe. Review any permission prompts before deciding to continue.</p></li>
+            <li><strong>Read any SmartScreen message.</strong><p>If Windows shows “Windows protected your PC” for an unrecognized app, select More info to inspect the file and publisher. If you downloaded it here and choose to trust this preview, select Run anyway when available.</p></li>
+            <li><strong>Finish setup and start listening.</strong><p>Follow the installer’s prompts, then open Dhun from the Start menu. Future updates are optional; install the newer version over the existing one to retain local app data.</p></li>
+          </ol>
+          <details className={styles.setupDetails}><summary>If Run anyway is missing</summary><p>A work or school policy, Windows S mode or Smart App Control can prevent installation. Ask your device administrator or <a href="https://github.com/jaitak2121-spec/dhun-music/issues">contact Dhun support</a> with the exact message. These instructions do not require changing those protections.</p></details>
+          <p className={styles.setupNote}>Keep Microsoft Defender and SmartScreen enabled. If Windows Security reports a named threat, quarantines the installer or says it contains malware, stop and report it. The steps above apply to an unrecognized-app reputation prompt.</p>
+          <a className={styles.setupSource} href="https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/publish-first-app#step-6-handle-smartscreen-for-new-apps" target="_blank" rel="noopener noreferrer">Microsoft’s SmartScreen guidance ↗</a>
+        </section>
+      </div>
       <section className={styles.macSetup} aria-labelledby="mac-setup">
         <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>YOUR FIRST LISTEN ON MAC</p><h2 id="mac-setup" tabIndex={-1}>From download to play.</h2></div><p>First-launch steps for this Mac preview.</p></div>
         <p className={styles.setupIntro}>Dhun’s current Mac preview is not Developer ID-signed or notarized by Apple. You may see “Apple could not verify Dhun is free of malware” when opening it for the first time.</p>
@@ -87,7 +115,7 @@ export default function Download() {
         </div>
       </section>
       <section className={styles.help} id="help"><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>A SMOOTH FIRST LISTEN</p><h2>Before you press play.</h2></div></div>
-        <details><summary>How do I install Dhun on Android?</summary><p>Download the APK above. Open it from your browser’s downloads, permit installation from that browser if Android asks, and tap Install. Keep your existing Dhun installed when updating to preserve its local data. If Android reports a signature mismatch, stop and contact support before uninstalling.</p></details>
+        <details><summary>How do I install Dhun on Android?</summary><p>Follow the <a href="#android-setup">Android setup guide above</a> for installation permissions, updates and Play Protect messages.</p></details>
         <details><summary>Why might my browser or computer show a warning?</summary><p>Dhun is a preview distributed directly. Chrome may warn about APK files downloaded outside a store. Windows installers are unsigned; Mac previews are not Apple-notarized and may be blocked. A download warning alone is not a malware scan result, and we cannot promise warning-free installation. Download only through these official links. If your security software specifically detects a threat, stop and report the exact message.</p></details>
         <details><summary>Which Mac download should I choose?</summary><p>Open Apple menu → About This Mac. Choose Apple Silicon if it lists an Apple M-series chip, or Intel if it lists an Intel processor. Follow the <a href="#mac-setup">Mac installation guide above</a> for the first-launch steps and screenshot.</p></details>
         <details><summary>Will Dhun update automatically?</summary><p>Recent versions offer optional update reminders. You choose when to download and install. Older versions without the updater need one manual download from this page. These download links point to the latest published previews.</p></details>
