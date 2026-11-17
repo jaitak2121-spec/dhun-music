@@ -119,7 +119,7 @@ export default function Download() {
         <div className={styles.setupGrid}>
           <ol className={styles.setupSteps}>
             <li><strong>Install and open the latest Mac preview.</strong><p>Open Dhun once from Applications and choose a song or build a queue. Complete the first-launch steps above if macOS blocks opening it.</p></li>
-            <li><strong>Create a shortcut in Apple Shortcuts.</strong><p>Open Shortcuts on your Mac, click +, then add the URL action. Enter <code>dhun-music://play</code> as its URL. Add Open URLs after it so the URL is opened.</p></li>
+            <li><strong>Create a shortcut in Apple Shortcuts.</strong><p>Open Shortcuts on your Mac and click +. If a Describe a Shortcut panel appears, click Edit to open the action editor. Add the URL action. Enter <code>dhun-music://play</code> as its URL. Add Open URLs after it so the URL is opened.</p></li>
             <li><strong>Name it Play Dhun.</strong><p>Run the shortcut once using the play button and review any permission prompt. It should open Dhun and start or resume your music.</p></li>
             <li><strong>Ask Siri using the shortcut’s name.</strong><p>Say “Hey Siri, Play Dhun.” You can create more shortcuts using the names and links beside these steps.</p></li>
           </ol>
