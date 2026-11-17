@@ -66,6 +66,7 @@ jobs:
           trap 'hdiutil detach "$MOUNT_PATH" >/dev/null 2>&1 || true; rmdir "$MOUNT_PATH"' EXIT
           hdiutil verify "dist/Dhun-Mac-${{ matrix.target == 'mac-arm64' && 'arm64' || 'x64' }}.dmg"
           hdiutil attach "dist/Dhun-Mac-${{ matrix.target == 'mac-arm64' && 'arm64' || 'x64' }}.dmg" -readonly -nobrowse -mountpoint "$MOUNT_PATH"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$MOUNT_PATH/Dhun.app/Contents/Info.plist")" = "dhun-music"
           codesign --verify --deep --strict --verbose=2 "$MOUNT_PATH/Dhun.app"
           codesign --verify --strict --verbose=2 "$MOUNT_PATH/Dhun.app/Contents/Resources/player/yt-dlp"
           "$MOUNT_PATH/Dhun.app/Contents/Resources/player/yt-dlp" --version

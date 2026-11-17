@@ -1,7 +1,7 @@
 {
   "name": "dhun-desktop",
   "productName": "Dhun",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Your music. Your rhythm.",
   "author": "Dhun contributors",
   "license": "GPL-3.0-only",
@@ -37,7 +37,8 @@
       "usage.mjs",
       "search-suggestions.mjs",
       "renderer/**/*",
-      "package.json"
+      "package.json",
+      "playback-links.mjs"
     ],
     "extraResources": [
       {
@@ -96,6 +97,15 @@
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Dhun",
       "uninstallDisplayName": "Dhun"
-    }
+    },
+    "protocols": [
+      {
+        "name": "Dhun playback controls",
+        "schemes": [
+          "dhun-music"
+        ],
+        "role": "Viewer"
+      }
+    ]
   }
 }

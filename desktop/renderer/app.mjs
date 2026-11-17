@@ -525,3 +525,23 @@ $('#usage-enabled').addEventListener('change',async event=>{
   catch{input.checked=!input.checked;$('#usage-status').textContent='Could not save your choice. Please try again.';}
   finally{input.disabled=false;}
 });
+
+async function shortcutPlayback(command){
+  if(command==='pause'){
+    if(state.resolving){state.generation++;state.resolving=false;}
+    audio.pause();updatePlayer();return;
+  }
+  if(command==='next')return advance(1);
+  if(command==='previous')return advance(-1);
+  if(command!=='play'||state.resolving)return;
+  if(!state.queue.length){
+    const tracks=state.favourites.length?state.favourites:state.recent.length?state.recent:state.local;
+    if(!tracks.length){showView('discover');status('Choose a song in Dhun first. Your Play Dhun shortcut can then start or resume your queue.');return;}
+    state.station=false;state.queue=tracks.map(track=>({...track,automatic:false,manual:false}));save('queue',state.queue);
+  }
+  if(state.index<0)return playAt(0);
+  if(!audio.getAttribute('src')||audio.ended)return playAt(state.index);
+  if(audio.paused)await audio.play();
+}
+window.dhun.onPlaybackCommand(safe(shortcutPlayback));
+request('playbackReady').catch(()=>{});

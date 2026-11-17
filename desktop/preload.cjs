@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('dhun', Object.freeze({
+  playbackReady: () => ipcRenderer.invoke('dhun:playbackReady'),
+  onPlaybackCommand: callback => {
+    const listener=(_event,command)=>{if(['play','pause','next','previous'].includes(command))callback(command);};
+    ipcRenderer.on('dhun:playback-command',listener);
+    return()=>ipcRenderer.removeListener('dhun:playback-command',listener);
+  },
   usageStatus: () => ipcRenderer.invoke('dhun:usageStatus'),
   usageSet: value => ipcRenderer.invoke('dhun:usageSet',value),
   search: query => ipcRenderer.invoke('dhun:search', query),

@@ -42,3 +42,11 @@ The desktop code is GPL-3.0-only. Electron's bundled third-party notices accompa
 Renderer code uses the Chromium version bundled with the pinned Electron release. Network content never receives Node access; renderer sandboxing, context isolation, CSP, constrained IPC, and a custom app/file protocol remain enabled.
 
 Discovery blends chosen music taste, qualified plays (30 seconds), favourites and early skips on this device with broader catalogue searches. Disable learning or reset its local signals in music taste settings. No listening signals are sent to Dhun Cloud; artist/search queries go to the music source. This does not import YouTube history or reproduce its home feed.
+
+## Siri shortcuts on Mac
+
+Desktop 0.6.3+ registers `dhun-music://` playback links. Create a shortcut in Apple's Shortcuts app with a URL action set to `dhun-music://play`, followed by Open URLs. Name it **Play Dhun**, run it once, then ask Siri using that name. Pause, next and previous use `dhun-music://pause`, `dhun-music://next` and `dhun-music://previous`.
+
+Play resumes the queue or starts it from the beginning after a fresh launch. With an empty queue it uses favourites, recent tracks, then imported local files. With a fresh empty library it opens Discover and asks you to choose a song. This is named-shortcut support, not Siri song-by-name/media-provider integration. No Apple Developer membership is required to create a personal shortcut; Mac preview installation warnings still apply.
+
+Only the four exact transport links are accepted; media URLs, file paths and arbitrary arguments are rejected. Cold-launch requests wait for renderer readiness. The latest transport request wins while the UI is starting.

@@ -14,6 +14,7 @@ import { cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload
 import {searchSuggestions} from './search-suggestions.mjs';
 
 import {usageClient} from './usage.mjs';
+import {playbackCommand} from './playback-links.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const player = path.join(app.isPackaged ? process.resourcesPath : path.join(root, 'resources'), 'player', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
@@ -27,7 +28,26 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'dhun', privileges: { standard: 
 app.setName('Dhun');
 if (process.env.DHUN_SMOKE === '1') app.setPath('userData', path.join(app.getPath('temp'), `dhun-smoke-${process.pid}`));
 if (!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance', () => { window?.show(); window?.focus(); });
+let playbackReady=false, pendingPlayback=null;
+function deliverPlayback(){
+  if(playbackReady&&window&&!window.isDestroyed()&&pendingPlayback){
+    const command=pendingPlayback;pendingPlayback=null;window.webContents.send('dhun:playback-command',command);
+  }
+}
+function externalPlayback(value){
+  const command=playbackCommand(value);if(!command)return;
+  // Before renderer readiness, the latest transport request wins.
+  pendingPlayback=command;
+  if(window&&!window.isDestroyed()){if(window.isMinimized())window.restore();window.show();window.focus();}
+  else if(app.isReady())app.emit('activate');
+  deliverPlayback();
+}
+app.on('open-url',(event,url)=>{if(playbackCommand(url)){event.preventDefault();externalPlayback(url);}});
+app.on('second-instance',(_event,args)=>{
+  for(const value of args||[])if(playbackCommand(value)){externalPlayback(value);return;}
+  if(window&&!window.isDestroyed()){window.show();window.focus();}
+});
+for(const value of process.argv)if(playbackCommand(value))externalPlayback(value);
 
 function extract(args, isSearch = false, timeout) {
   if (isSearch) searching?.kill();
@@ -81,6 +101,8 @@ async function serve(request) {
   } catch { return new Response('File unavailable', { status: 404 }); }
 }
 app.whenReady().then(async () => {
+if(app.isPackaged&&process.env.DHUN_SMOKE!=='1')app.setAsDefaultProtocolClient('dhun-music');
+handle('playbackReady',()=>{playbackReady=true;deliverPlayback();return{};});
 const bufferDirectory = await mkdtemp(path.join(app.getPath('temp'), 'dhun-playback-'));
 const localStore = path.join(app.getPath('userData'), 'local-files.json');
 try {
@@ -187,15 +209,18 @@ Menu.setApplicationMenu(Menu.buildFromTemplate([
   ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
   { label: 'File', submenu: [{ role: 'close' }, ...(process.platform !== 'darwin' ? [{ role: 'quit' }] : [])] },
   { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' },
-  { role: 'help', submenu: [{ label: 'Dhun downloads and source', click: () => shell.openExternal(RELEASES) }] },
+  { role: 'help', submenu: [{ label: 'Dhun downloads and source', click: () => shell.openExternal(RELEASES) },...(process.platform==='darwin'?[{label:'Set up Siri shortcuts',click:()=>shell.openExternal('https://dhun-cloud.vercel.app/download#siri-setup')}]:[])] },
 ]));
 function createWindow() {
+  playbackReady=false;
   window = new BrowserWindow({ width: 1320, height: 880, minWidth: 900, minHeight: 650, title: 'Dhun', backgroundColor: '#080808',
     icon: path.join(root, 'renderer/logo.svg'), show: false,
     webPreferences: { preload: path.join(root, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true } });
+  window.webContents.on('did-start-loading',()=>{playbackReady=false;});
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.on('focus',()=>{void usage.foreground();});
+  window.on('closed',()=>{playbackReady=false;window=null;});
   window.once('ready-to-show', () => window.show());
   window.loadURL('dhun://app/index.html');
 }

@@ -68,7 +68,7 @@ export default function Download() {
           <article className={styles.platform}>
             <span className={styles.platformIndex}>03 / DESKTOP</span><h3>Mac</h3><p>macOS 12+ · Choose your chip</p>
             <div className={styles.macLinks}><a className={styles.installer} href="/api/download/mac-arm64">Apple Silicon · DMG <Arrow/></a><a className={styles.intel} href="/api/download/mac-x64">Intel Mac · DMG <span aria-hidden="true">↗</span></a></div>
-            <small>Check Apple menu → About This Mac. This preview is not notarized by Apple; macOS may block first launch.</small><a className={styles.setupLink} href="#mac-setup">How to install on Mac <span aria-hidden="true">↓</span></a>
+            <small>Check Apple menu → About This Mac. This preview is not notarized by Apple; macOS may block first launch.</small><a className={styles.setupLink} href="#mac-setup">How to install on Mac <span aria-hidden="true">↓</span></a><a className={styles.setupLink} href="#siri-setup">Set up Siri shortcuts <span aria-hidden="true">↓</span></a>
           </article>
         </div>
         <p className={styles.downloadNote}>Direct installers, without ZIP extraction. These links always point to the latest published previews. Desktop features currently differ from Android.</p>
@@ -112,6 +112,18 @@ export default function Download() {
             <li><strong>Choose whether to open this preview.</strong><p>If you downloaded Dhun from this page and want to proceed, click Open Anyway beside Dhun. Authenticate if asked, then click Open in the confirmation. Keep your Mac’s other security settings enabled.</p></li>
           </ol>
           <figure className={styles.setupImage}><a href="/screenshots/mac-open-anyway.png" target="_blank" rel="noopener noreferrer" aria-label="View full-size macOS Privacy and Security screenshot"><img src="/screenshots/mac-open-anyway.png" width="1008" height="292" loading="lazy" alt="macOS Privacy and Security showing Dhun was blocked to protect your Mac, with an Open Anyway button beside it"/></a><figcaption>Look for Open Anyway beside Dhun in Privacy &amp; Security. <a href="/screenshots/mac-open-anyway.png" target="_blank" rel="noopener noreferrer">View full-size screenshot ↗</a></figcaption><p className={styles.setupNote}>These steps apply to Apple’s unverified-app warning. If the alert says the app is damaged or will damage your computer, stop and <a href="https://github.com/jaitak2121-spec/dhun-music/issues">report the exact message</a>. A managed work or school Mac may not offer Open Anyway.</p><a className={styles.setupSource} href="https://support.apple.com/en-us/102445" target="_blank" rel="noopener noreferrer">Read Apple’s installation guidance ↗</a></figure>
+        </div>
+      </section>
+      <section className={styles.macSetup} aria-labelledby="siri-setup">
+        <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>LESS TAPPING. MORE LISTENING.</p><h2 id="siri-setup" tabIndex={-1}>“Hey Siri, Play Dhun.”</h2></div><p>Mac · Dhun desktop 0.6.3 or later</p></div>
+        <div className={styles.setupGrid}>
+          <ol className={styles.setupSteps}>
+            <li><strong>Install and open the latest Mac preview.</strong><p>Open Dhun once from Applications and choose a song or build a queue. Complete the first-launch steps above if macOS blocks opening it.</p></li>
+            <li><strong>Create a shortcut in Apple Shortcuts.</strong><p>Open Shortcuts on your Mac, click +, then add the URL action. Enter <code>dhun-music://play</code> as its URL. Add Open URLs after it so the URL is opened.</p></li>
+            <li><strong>Name it Play Dhun.</strong><p>Run the shortcut once using the play button and review any permission prompt. It should open Dhun and start or resume your music.</p></li>
+            <li><strong>Ask Siri using the shortcut’s name.</strong><p>Say “Hey Siri, Play Dhun.” You can create more shortcuts using the names and links beside these steps.</p></li>
+          </ol>
+          <div className={styles.setupImage}><h3>Playback shortcuts</h3><div className={styles.shortcutTable}><table><thead><tr><th>Shortcut name</th><th>URL action</th></tr></thead><tbody><tr><td>Play Dhun</td><td><code>dhun-music://play</code></td></tr><tr><td>Pause Dhun</td><td><code>dhun-music://pause</code></td></tr><tr><td>Next in Dhun</td><td><code>dhun-music://next</code></td></tr><tr><td>Previous in Dhun</td><td><code>dhun-music://previous</code></td></tr></tbody></table></div><p className={styles.setupNote}>This setup runs named Apple Shortcuts. General requests such as “play this artist in Dhun” are not supported yet. Play starts or resumes your queue; if it is empty, Dhun uses favourites, recent tracks or imported local music. On a fresh library, choose a song in Dhun first.</p><a className={styles.setupSource} href="https://support.apple.com/guide/shortcuts-mac/apd07c25bb38/mac" target="_blank" rel="noopener noreferrer">Apple’s guide to running shortcuts with Siri ↗</a></div>
         </div>
       </section>
       <section className={styles.help} id="help"><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>A SMOOTH FIRST LISTEN</p><h2>Before you press play.</h2></div></div>

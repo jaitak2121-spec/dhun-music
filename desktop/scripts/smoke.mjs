@@ -15,7 +15,7 @@ await writeFile(path.join(directory, 'Dhun test tone.lrc'), '[00:00.05]A quiet b
 let application;
 try {
   application = await electron.launch({
-    ...(process.env.DHUN_SMOKE_APP ? { executablePath: path.resolve(process.env.DHUN_SMOKE_APP), args: [] } : { args: ['.'] }),
+    ...(process.env.DHUN_SMOKE_APP ? { executablePath: path.resolve(process.env.DHUN_SMOKE_APP), args: ['dhun-music://play'] } : { args: ['.','dhun-music://play'] }),
     timeout: 30000, env: { ...process.env, DHUN_SMOKE: '1' },
   });
   const page = await application.firstWindow();
@@ -24,6 +24,7 @@ try {
   await expect(page.getByRole('heading', { name: 'Discover', exact: true })).toBeVisible();
   await expect(page.locator('.brand > span')).toHaveText('Dhun');
   await expect(page.locator('#intro')).toHaveCount(0, { timeout: 5000 });
+  await expect(page.locator('#status')).toContainText('Choose a song in Dhun first');
   await page.getByRole('button',{name:'Make it yours',exact:true}).click();
   await expect(page.getByLabel('Share anonymous usage',{exact:true})).not.toBeChecked();
   await expect(page.getByText('Optional anonymous usage',{exact:true})).toBeVisible();
@@ -36,6 +37,14 @@ try {
   await expect.poll(() => page.locator('#audio').evaluate(audio => audio.currentTime)).toBeGreaterThan(.15);
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect.poll(() => page.locator('#audio').evaluate(audio => audio.paused)).toBe(true);
+  await application.evaluate(({app})=>app.emit('open-url',{preventDefault(){}},'dhun-music://play'));
+  await expect.poll(()=>page.locator('#audio').evaluate(audio=>audio.paused)).toBe(false);
+  await application.evaluate(({app})=>app.emit('open-url',{preventDefault(){}},'dhun-music://play'));
+  await expect.poll(()=>page.locator('#audio').evaluate(audio=>audio.paused)).toBe(false);
+  await application.evaluate(({app})=>app.emit('open-url',{preventDefault(){}},'dhun-music://pause'));
+  await expect.poll(()=>page.locator('#audio').evaluate(audio=>audio.paused)).toBe(true);
+  await application.evaluate(({app})=>app.emit('open-url',{preventDefault(){}},'dhun-music://play?url=https://invalid.example'));
+  await expect.poll(()=>page.locator('#audio').evaluate(audio=>audio.paused)).toBe(true);
   await page.locator('#seek').fill('5');
   await expect.poll(() => page.locator('#audio').evaluate(audio => audio.currentTime)).toBeGreaterThan(4);
   await page.getByRole('button', { name: 'Show lyrics', exact: true }).click();
@@ -74,7 +83,7 @@ try {
   await expect(page.locator('#intro')).toHaveCount(0);
   await page.getByRole('button', { name: /^Favourites/ }).click();
   await expect(page.getByRole('button', { name: 'Play Dhun test tone' })).toBeVisible();
-  await page.getByRole('button', { name: 'Play Dhun test tone' }).click();
+  await application.evaluate(({app})=>app.emit('open-url',{preventDefault(){}},'dhun-music://play'));
   await expect.poll(() => page.locator('#audio').evaluate(audio => audio.currentTime)).toBeGreaterThan(.1);
   await page.getByRole('button', { name: 'Show play queue' }).click();
   await page.getByRole('button', { name: 'Remove Dhun test tone from queue' }).click();
