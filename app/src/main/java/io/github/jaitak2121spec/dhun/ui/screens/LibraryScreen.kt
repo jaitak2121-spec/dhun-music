@@ -598,11 +598,13 @@ private const val PLAYLISTS = YtMusicRepository.PLAYLISTS_SHELF
 
 @Composable
 private fun PlaylistActionCard(label: String, subtitle: String, symbol: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.fillMaxWidth().size(96.dp), contentAlignment = Alignment.Center) {
-            Text(symbol, style = MaterialTheme.typography.displayMedium)
+    androidx.compose.material3.Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer, contentColor = MaterialTheme.colorScheme.onSurface) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.fillMaxWidth().size(80.dp), contentAlignment = Alignment.Center) {
+                Text(symbol, style = MaterialTheme.typography.displayMedium)
+            }
+            Text(label, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, minLines = 2, maxLines = 2, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(label, style = MaterialTheme.typography.titleMedium)
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

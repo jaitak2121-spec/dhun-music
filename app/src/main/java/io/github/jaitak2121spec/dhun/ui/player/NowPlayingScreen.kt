@@ -605,7 +605,6 @@ fun NowPlayingScreen(
      * the settings page it opens is drawn under the player sheet, and closing
      * the sheet is the caller's business.
      */
-    onListenTogether: () -> Unit,
     lyrics: List<LyricLine>?,
     lyricsSource: LyricsSource?,
     lyricsProviderStates: Map<LyricsSource, LyricsProviderState>,
@@ -655,13 +654,6 @@ fun NowPlayingScreen(
     // Listening in a party whose host has taken the controls: the transport
     // keeps only play/pause, which from here moves this device alone.
     val controlsLocked = rememberControlsLocked()
-    var showListenTogetherMembers by remember { mutableStateOf(false) }
-    // Who's actually in the party is worth a look before the settings page —
-    // see [ListenTogetherMembersSheet]. Only meaningful once there is a party
-    // to show, so the pill and the caption fall back to [onListenTogether]
-    // itself (create/join) when there isn't one.
-    val openListenTogetherMembers: () -> Unit = { showListenTogetherMembers = true }
-
     val syncedLyricsEnabled by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsOffsetMs by AppSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
     // The playhead the lyric strip and panel read: the player's latest reading,
@@ -894,7 +886,6 @@ fun NowPlayingScreen(
 
     PlayerBackHandler(enabled = showLyricsProviders) { showLyricsProviders = false }
 
-    PlayerBackHandler(enabled = showListenTogetherMembers) { showListenTogetherMembers = false }
 
     PlayerBackHandler(enabled = showAudioPipeline) { showAudioPipeline = false }
 
@@ -1309,7 +1300,7 @@ fun NowPlayingScreen(
     // back to the album or playlist the session was started from.
     val openPlaybackOrigin: () -> Unit = {
         if (playedBy != null) {
-            onListenTogether()
+            onOpenPlaybackSource()
         } else if (song.playbackSourceType == PlaybackSourceType.QUEUE) {
             queueOpen = true
             closeLyrics()
@@ -1378,8 +1369,6 @@ fun NowPlayingScreen(
             onCycleRepeat = onCycleRepeat,
             onToggleAutoplay = onToggleAutoplay,
             onOpenOutput = openAudioOutput,
-            onListenTogether = onListenTogether,
-            onOpenListenTogetherMembers = openListenTogetherMembers,
         )
         // Keep the current output caption visible in every state.
         Spacer(Modifier.height(18.dp))
@@ -1390,7 +1379,6 @@ fun NowPlayingScreen(
             OutputCaption(
                 accountName = accountName,
                 onOpenOutput = openAudioOutput,
-                onOpenMembers = openListenTogetherMembers,
             )
         }
     }
@@ -1423,16 +1411,7 @@ fun NowPlayingScreen(
                 onDismiss = { showAudioPipeline = false },
             )
         }
-        if (showListenTogetherMembers) {
-            ListenTogetherMembersSheet(
-                hazeState = playerHaze,
-                onDismiss = { showListenTogetherMembers = false },
-                onManage = {
-                    showListenTogetherMembers = false
-                    onListenTogether()
-                },
-            )
-        }
+
         if (lyricsOffsetOpen) {
             LyricsOffsetSheet(
                 hazeState = playerHaze,

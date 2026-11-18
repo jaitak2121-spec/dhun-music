@@ -22,6 +22,7 @@ class DhunThemeTest {
             for ((text, background) in listOf(
                 scheme.onBackground to scheme.background,
                 scheme.onSurface to scheme.surface,
+                scheme.onSurface to scheme.surfaceContainer,
                 scheme.onSurfaceVariant to scheme.surfaceVariant,
                 scheme.onPrimary to scheme.primary,
                 scheme.onPrimaryContainer to scheme.primaryContainer,

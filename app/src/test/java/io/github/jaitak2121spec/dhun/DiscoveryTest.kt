@@ -50,4 +50,13 @@ class DiscoveryTest {
         val shelves = cleanHomeShelves(listOf(HomeShelf("Other",listOf(item)),HomeShelf("Picked for your taste",listOf(item.copy(videoId=song(2).videoId))),HomeShelf("Recents",listOf(item))))
         assertEquals(listOf("Recents","Picked for your taste"), shelves.map { it.title })
     }
+    @Test fun `guided taste choices cap selections and keep order when replacing a choice`() {
+        val choices = listOf("Pop", "Indie", "Rock")
+        assertEquals(choices, io.github.jaitak2121spec.dhun.data.toggleTasteSelection(choices, "Jazz", 3))
+        val removed = io.github.jaitak2121spec.dhun.data.toggleTasteSelection(choices, "Indie", 3)
+        assertEquals(listOf("Pop", "Rock"), removed)
+        assertEquals(listOf("Pop", "Rock", "Jazz"), io.github.jaitak2121spec.dhun.data.toggleTasteSelection(removed, "Jazz", 3))
+        assertTrue(io.github.jaitak2121spec.dhun.data.toggleTasteSelection(listOf("A"), "A", 3).isEmpty())
+    }
+
 }

@@ -142,7 +142,6 @@ import io.github.jaitak2121spec.dhun.ui.screens.DiscordDialogHost
 import io.github.jaitak2121spec.dhun.ui.screens.DiscordScreen
 import io.github.jaitak2121spec.dhun.ui.screens.EqualizerScreen
 import io.github.jaitak2121spec.dhun.ui.screens.HistoryScreen
-import io.github.jaitak2121spec.dhun.ui.screens.ListenTogetherScreen
 import io.github.jaitak2121spec.dhun.ui.screens.PartyServerEditor
 import io.github.jaitak2121spec.dhun.ui.screens.SettingsScreen
 import io.github.jaitak2121spec.dhun.ui.screens.SourceEditorAlert
@@ -423,10 +422,9 @@ private fun DhunApp(
 
     val accountReturns by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.accountReturns.collectAsStateWithLifecycle()
     LaunchedEffect(accountReturns) { if (accountReturns > 0) showDhunAccount = true }
-    if (showDhunAccount) io.github.jaitak2121spec.dhun.ui.screens.CloudBackupDialog(onDismiss = {
-        showDhunAccount = false
-        viewModel.loadHome()
-    })
+    if (showDhunAccount) io.github.jaitak2121spec.dhun.ui.screens.CloudBackupDialog(
+        onDismiss = { showDhunAccount = false }, onTasteChanged = viewModel::loadHome,
+    )
     val clipboard = LocalClipboardManager.current
     val hazeState = remember { HazeState() }
     // Recording the backdrop layer costs a draw pass, so it only runs when a
@@ -483,7 +481,6 @@ private fun DhunApp(
     var replaySharePage by remember { mutableStateOf<ReplayStoryPage?>(null) }
     var showAccountScrobbling by remember { mutableStateOf(false) }
     var showSources by remember { mutableStateOf(false) }
-    var showListenTogether by remember { mutableStateOf(false) }
     var showEqualizer by remember { mutableStateOf(false) }
     var showSpotifyCanvasAuth by remember { mutableStateOf(false) }
 
@@ -494,7 +491,6 @@ private fun DhunApp(
     // and the mini player, like every other alert in the app.
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
-    var editingPartyServer by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     // A Library shelf's "Show all" — the shelf it was opened from, so its own
     // cards can be laid out again as a full-screen grid. See [LibraryGridPage].
@@ -566,7 +562,6 @@ private fun DhunApp(
     // suggestions, and pressing the button appeared to do nothing, because it
     // turned the party's setting on while the label already said so.
     val autoplayEnabled = autoplayEnabledFor(partyState, autoplay)
-    val partyServerStatus by ListenTogether.serverConnectionState.collectAsStateWithLifecycle()
     val listenBrainzToken by AppSettings.listenBrainzToken.collectAsStateWithLifecycle()
     // Set each time the search tab is tapped, which SearchScreen uses as a
     // signal to focus the input field.
@@ -617,37 +612,13 @@ private fun DhunApp(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
     val incomingJamInvite by JamInviteLink.pending.collectAsStateWithLifecycle()
-    var activeJamInviteCode by rememberSaveable { mutableStateOf<String?>(null) }
-    var activeJamInviteServer by rememberSaveable { mutableStateOf<String?>(null) }
-
-    // An invite is navigation and an action: reveal the Jam settings page now,
-    // then let that page join once an account is available. Keeping the code
-    // here lets a sign-in round trip return to the invite it started from.
     LaunchedEffect(incomingJamInvite) {
-        val invite = incomingJamInvite ?: return@LaunchedEffect
-        activeJamInviteCode = invite.code
-        activeJamInviteServer = invite.serverUrl
-        showNowPlaying = false
-        showReplay = false
-        replayStory = null
-        showReplayShare = false
-        showAccountScrobbling = false
-        showSources = false
-        showEqualizer = false
-        showHistory = false
-        showDiscord = false
-        libraryShowAll = null
-        viewModel.clearDetail()
-        showSettings = true
-        showListenTogether = true
-        JamInviteLink.handled()
-    }
-    LaunchedEffect(signedIn, activeJamInviteCode) {
-        if (signedIn && activeJamInviteCode != null) {
-            showSettings = true
-            showListenTogether = true
+        if (incomingJamInvite != null) {
+            android.widget.Toast.makeText(context, "Listen together is not available in Dhun.", android.widget.Toast.LENGTH_SHORT).show()
+            JamInviteLink.handled()
         }
     }
+
     val account by viewModel.account.collectAsStateWithLifecycle()
     val selectedChannelName by viewModel.selectedChannelName.collectAsStateWithLifecycle()
     val googleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle()
@@ -2187,7 +2158,6 @@ private fun DhunApp(
                 showSettings = false
                 showAccountScrobbling = false
                 showSources = false
-                showListenTogether = false
                 showEqualizer = false
                 showReplay = false
                 showHistory = false
@@ -2234,13 +2204,6 @@ private fun DhunApp(
             lyricsUnavailable = lyricsChecked && lyrics.isNullOrEmpty(),
             lyricsOffsetOpen = showLyricsOffset,
             onDismissLyricsOffset = { showLyricsOffset = false },
-            onListenTogether = {
-                // The player is a sheet over the page, so it has to come down
-                // for the page to be read at all.
-                showNowPlaying = false
-                showSettings = true
-                showListenTogether = true
-            },
             onClearQueue = {
                 // Keep what's playing and context/autoplay; drop user-queued tracks.
                 controller?.let { c ->
@@ -2267,7 +2230,7 @@ private fun DhunApp(
             showReplay = false
         }
         BackHandler(
-            enabled = detail != null && !showSettings && !showAccountScrobbling && !showSources && !showListenTogether &&
+            enabled = detail != null && !showSettings && !showAccountScrobbling && !showSources &&
                 !showEqualizer && !showReplay,
         ) { viewModel.closeDetail() }
         BackHandler(enabled = selectedMoodGenre != null && detail == null && !showSettings && !showReplay) {
@@ -2282,16 +2245,14 @@ private fun DhunApp(
         BackHandler(enabled = showSources) {
             showSources = false
         }
-        BackHandler(enabled = showListenTogether) {
-            showListenTogether = false
-        }
+
         BackHandler(enabled = showEqualizer) {
             showEqualizer = false
         }
         // One back step out of Settings, or out of any tab but Home, lands on
         // Home rather than exiting — only Home itself hands back to the system,
         // which is what actually closes/minimizes the app.
-        BackHandler(enabled = showSettings && !showAccountScrobbling && !showSources && !showListenTogether && !showEqualizer) {
+        BackHandler(enabled = showSettings && !showAccountScrobbling && !showSources && !showEqualizer) {
             showSettings = false
             // Only when Settings was the whole of what was on screen. Opened
             // over Replay or over a release page, closing it reveals that again
@@ -2300,7 +2261,7 @@ private fun DhunApp(
         }
         BackHandler(
             enabled = detail == null && !showSettings && !showAccountScrobbling &&
-                !showSources && !showListenTogether && !showEqualizer && !showReplay && selectedMoodGenre == null &&
+                !showSources && !showEqualizer && !showReplay && selectedMoodGenre == null &&
                 selectedTab != TAB_HOME,
         ) {
             selectedTab = TAB_HOME
@@ -2311,7 +2272,6 @@ private fun DhunApp(
         BackHandler(enabled = showLastfmAuthorize) { showLastfmAuthorize = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
-        BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = showHistory) { showHistory = false }
         // Disabled while a detail page is open over the grid: that one's own
         // BackHandler below has to close first, or back would skip past it
@@ -2339,7 +2299,6 @@ private fun DhunApp(
                         libraryShowAll != null && detail == null -> "library_show_all"
                         showAccountScrobbling -> "account_scrobbling"
                         showSources -> "sources"
-                        showListenTogether -> "listen_together"
                         showEqualizer -> "equalizer"
                         // Above Replay, not below it. The top bar's account
                         // button sets `showSettings` from every page including
@@ -2520,23 +2479,6 @@ private fun DhunApp(
                             onEditSmb = { showSmbEditor = true },
                             onConfirmJioSaavn = { confirmJioSaavn = true },
                         )
-                    } else if (key == "listen_together") {
-                        ListenTogetherScreen(
-                            signedIn = signedIn,
-                            inviteCode = activeJamInviteCode,
-                            inviteServer = activeJamInviteServer,
-                            onInviteHandled = {
-                                activeJamInviteCode = null
-                                activeJamInviteServer = null
-                            },
-                            onSignIn = {
-                                showListenTogether = false
-                                showSettings = false
-                                showDhunAccount = true
-                            },
-                            contentPadding = listPadding,
-                            onEditServer = { editingPartyServer = true },
-                        )
                     } else if (key == "equalizer") {
                         EqualizerScreen(contentPadding = listPadding)
                     } else if (key == "settings") {
@@ -2559,7 +2501,7 @@ private fun DhunApp(
                             onLyricsSources = { showLyricsSources = true },
                             onTranslationLanguage = { showTranslationLanguage = true },
                             onSources = { showSources = true },
-                            onListenTogether = { showListenTogether = true },
+                            onTasteChanged = viewModel::loadHome,
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
                             onAppLanguage = { showAppLanguage = true },
                             onOpenLastfmAuthorize = { showLastfmAuthorize = true },
@@ -2748,8 +2690,6 @@ private fun DhunApp(
                     } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
                         TAB_HOME -> HomeScreen(
                             dhunSignedIn = dhunSignedIn,
-                            onTasteChanged = viewModel::loadHome,
-                            onListenTogether = { showListenTogether = true },
                             onDevicePlaylists = { devicePlaylistSong = null; showDevicePlaylists = true },
                             state = homeState,
                             listState = homeListState,
@@ -2992,10 +2932,10 @@ private fun DhunApp(
                         detail.type == BrowseType.PLAYLIST ||
                         detail.type == BrowseType.ARTIST) &&
                     !isLocalDetail && !showDiscord && !showHistory && !showSettings &&
-                    !showAccountScrobbling && !showSources && !showListenTogether && !showEqualizer && !showReplay
+                    !showAccountScrobbling && !showSources && !showEqualizer && !showReplay
                 val isReplayVisible = showReplay && !showDiscord && !showHistory &&
                     !(libraryShowAll != null && detail == null) &&
-                    !showAccountScrobbling && !showSources && !showListenTogether &&
+                    !showAccountScrobbling && !showSources &&
                     !showEqualizer && !showSettings
                 val chromePageColor = if (isDetailVisible) {
                     detailPalette.background
@@ -3029,7 +2969,6 @@ private fun DhunApp(
                         libraryShowAll != null && detail == null -> libraryShowAll?.title.orEmpty()
                         showAccountScrobbling -> stringResource(R.string.account_scrobbling)
                         showSources -> stringResource(R.string.sources)
-                        showListenTogether -> stringResource(R.string.listen_together)
                         showEqualizer -> stringResource(R.string.equalizer)
                         showSettings -> stringResource(R.string.settings)
                         showReplay -> stringResource(R.string.replay)
@@ -3047,7 +2986,7 @@ private fun DhunApp(
                     // Search has no large in-list header to hand the title back to —
                     // the field takes that space — so its bar title is always up.
                     scrolled = when {
-                        showSettings || showAccountScrobbling || showSources || showListenTogether ||
+                        showSettings || showAccountScrobbling || showSources ||
                             showEqualizer ||
                             showDiscord || showHistory ||
                             (libraryShowAll != null && detail == null) ||
@@ -3067,7 +3006,6 @@ private fun DhunApp(
                         libraryShowAll != null && detail == null -> ({ libraryShowAll = null })
                         showAccountScrobbling -> ({ showAccountScrobbling = false })
                         showSources -> ({ showSources = false })
-                        showListenTogether -> ({ showListenTogether = false })
                         showEqualizer -> ({ showEqualizer = false })
                         showSettings -> ({ showSettings = false })
                         showReplay -> ({ showReplay = false })
@@ -3078,68 +3016,9 @@ private fun DhunApp(
                     },
                     modifier = Modifier.align(Alignment.TopCenter),
                     actions = {
-                        // This is intentionally scoped to Listen together: the
-                        // round-trip time is meaningful while coordinating a
-                        // party, but would be noise in the rest of the app.
-                        if (showListenTogether) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp),
-                            ) {
-                                when (val state = partyServerStatus) {
-                                    is ServerConnectionState.CustomFallback -> {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            contentDescription = stringResource(R.string.listen_together_top_bar_fallback, stringResource(R.string.listen_together_ping, state.latencyMs)),
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    is ServerConnectionState.CustomOnline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    is ServerConnectionState.DefaultOnline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_ping, state.latencyMs),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    ServerConnectionState.Checking -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_server_checking),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                    ServerConnectionState.Offline -> {
-                                        Text(
-                                            text = stringResource(R.string.listen_together_server_offline_dash),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.error,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                            }
-                        }
                         // Only worth surfacing where there's room for it and it won't
                         // be mistaken for a per-page action — Home, at rest.
-                        if (!showSettings && !showAccountScrobbling && !showSources && !showListenTogether && !showEqualizer &&
+                        if (!showSettings && !showAccountScrobbling && !showSources && !showEqualizer &&
                             detail == null && selectedTab == TAB_HOME
                         ) {
                             updateNotice?.let { update ->
@@ -3261,7 +3140,6 @@ private fun DhunApp(
                     showSettings = false
                     showAccountScrobbling = false
                     showSources = false
-                    showListenTogether = false
                     showEqualizer = false
                     showReplay = false
                     showHistory = false
@@ -4233,12 +4111,7 @@ private fun DhunApp(
         // At the root with the source editor, and for the same two reasons: it
         // is a haze card that has to sample the backdrop it is *not* inside,
         // and a full-window scrim that has to be full-window.
-        if (editingPartyServer) {
-            PartyServerEditor(
-                hazeState = hazeState,
-                onDismiss = { editingPartyServer = false },
-            )
-        }
+
 
         editingSource?.let { config ->
             SourceEditorAlert(

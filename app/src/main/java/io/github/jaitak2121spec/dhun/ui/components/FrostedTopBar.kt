@@ -564,7 +564,7 @@ fun TopBarAccountButton(
             ) {
                 val displayName = account?.name?.trim().orEmpty()
                 if (displayName.isNotEmpty()) Text(io.github.jaitak2121spec.dhun.ui.screens.profileInitial(displayName),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.semantics { contentDescription = "Your Dhun profile: $displayName" })
                 else Icon(Icons.Rounded.Person, contentDescription = "Sign in to Dhun",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))

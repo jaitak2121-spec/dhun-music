@@ -119,15 +119,11 @@ fun HomeScreen(
     onLoadMore: (() -> Unit)? = null,
     loadingMore: Boolean = false,
     recentlyPlayedLoading: Boolean = false,
-    onTasteChanged: () -> Unit = {},
-    onListenTogether: (() -> Unit)? = null,
     onDevicePlaylists: (() -> Unit)? = null,
 ) {
     val recentsViewType by AppSettings.homeRecentsViewType.collectAsStateWithLifecycle()
     val motion = dhunMotionEnabled()
     val taste by AppSettings.discoveryTaste.collectAsStateWithLifecycle()
-    var showTaste by remember { mutableStateOf(false) }
-    if (showTaste) DiscoveryTasteDialog(onDismiss = { showTaste = false }, onSaved = onTasteChanged)
 
     PullToRefresh(
         refreshing = refreshing,
@@ -148,14 +144,11 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
                 )
             }
-            item {
-                TextButton(onClick = { showTaste = true }, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) {
-                    Text(if (taste.configured) "Fine-tune your music taste" else "Personalise your recommendations")
-                }
+            if (dhunSignedIn && onSignIn != null) item {
+                TextButton(onClick = onSignIn, modifier = Modifier.padding(horizontal = PAGE_GUTTER)) { Text("Your music profile") }
             }
             item {
                 Row(Modifier.padding(horizontal = PAGE_GUTTER)) {
-                    onListenTogether?.let { action -> TextButton(onClick = action) { Text("Listen together") } }
                     onDevicePlaylists?.let { action -> TextButton(onClick = action) { Text("Your playlists") } }
                 }
             }
@@ -184,7 +177,7 @@ fun HomeScreen(
                 }
                 is UiState.Success -> {
                     if (state.data.isEmpty()) item {
-                        MessageState("No matching music is available right now. Try another artist or genre.", actionLabel = "Change preferences", onAction = { showTaste = true })
+                        MessageState("No matching music is available right now. Try another artist or genre.", actionLabel = "Your music profile", onAction = onSignIn)
                     }
                     if (recentlyPlayedLoading) {
                         recentlyPlayedSkeleton(listLayout = recentsViewType == LibraryViewType.LIST)

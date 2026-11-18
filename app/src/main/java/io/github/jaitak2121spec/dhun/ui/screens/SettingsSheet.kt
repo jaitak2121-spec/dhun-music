@@ -184,7 +184,7 @@ fun SettingsScreen(
     onLyricsSources: () -> Unit,
     onTranslationLanguage: () -> Unit,
     onSources: () -> Unit,
-    onListenTogether: () -> Unit,
+    onTasteChanged: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
     onAppLanguage: () -> Unit,
     /** Opens Last.fm's authorization page when a password sign-in is refused. */
@@ -195,7 +195,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     var usageEnabled by remember { mutableStateOf(io.github.jaitak2121spec.dhun.data.UsageAnalytics.enabled(context)) }
     var showCloudBackup by remember { mutableStateOf(false) }
-    if (showCloudBackup) CloudBackupDialog(onDismiss = { showCloudBackup = false })
+    if (showCloudBackup) CloudBackupDialog(onDismiss = { showCloudBackup = false }, onTasteChanged = onTasteChanged)
 
     val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()

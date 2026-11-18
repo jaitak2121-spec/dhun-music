@@ -75,3 +75,10 @@ fun discoveryShelves(personal: List<List<Song>>, fresh: List<List<Song>>, exclud
         HomeShelf(title = title, subtitle = subtitle, items = it.map { song -> ShelfItem(song.title, song.artist, song.thumbnailUrl, song.videoId, null) })
     } }
 }
+
+/** Preserve selection order and never exceed a step's visible choice limit. */
+internal fun toggleTasteSelection(selected: List<String>, choice: String, maximum: Int): List<String> = when {
+    choice in selected -> selected.filterNot { it == choice }
+    selected.size < maximum -> selected + choice
+    else -> selected
+}

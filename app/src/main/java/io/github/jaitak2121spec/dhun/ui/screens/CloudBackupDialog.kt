@@ -44,12 +44,14 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 @Composable
-fun CloudBackupDialog(onDismiss: () -> Unit) {
+fun CloudBackupDialog(onDismiss: () -> Unit, onTasteChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val cloud = remember { CloudAccounts(context.applicationContext) }
     val scope = rememberCoroutineScope()
     val profile by CloudAccounts.profile.collectAsStateWithLifecycle()
     var optionsExpanded by remember { mutableStateOf(false) }
+    var showTaste by remember { mutableStateOf(false) }
+    if (showTaste) DiscoveryTasteDialog(onDismiss = { showTaste = false }, onSaved = { onTasteChanged(); onDismiss() })
     var connected by remember { mutableStateOf(cloud.connected) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
@@ -72,6 +74,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                 cloud.account()
                 connected = true
                 message = "You're signed in. Welcome to Dhun."
+                showTaste = !AppSettings.discoveryTaste.value.configured
                 return
             }
         }
@@ -100,7 +103,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (!connected) {
-                    Text("Your profile and optional cloud backups, in one place.")
+                    Text("Sign in, then choose the languages, sounds and artists you love.")
                     Spacer(Modifier.height(12.dp))
                     Text("Dhun saves your Google name, email and profile photo for your account.", style = MaterialTheme.typography.bodySmall)
                     Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
@@ -113,6 +116,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                             .launchUrl(context, Uri.parse(data.getString("verificationUrl")))
                         awaitSignIn()
                     } }) { Text(if (busy) "Signing in…" else "Continue with Google") }
+                    TextButton(enabled = !busy, onClick = { showTaste = true }) { Text("Continue without signing in") }
                 } else {
                     Text(profile?.name.orEmpty(), style = MaterialTheme.typography.titleLarge)
                     Text(profile?.email.orEmpty(), style = MaterialTheme.typography.bodyMedium)
@@ -120,6 +124,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit) {
                     Text(message, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (profile == null && !busy) TextButton(onClick = { perform { cloud.account(); message = "" } }) { Text("Refresh profile") }
+                    Button(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = { showTaste = true }) { Text("Your music profile") }
                     TextButton(onClick = { optionsExpanded = !optionsExpanded }) { Text(if (optionsExpanded) "Hide backup options" else "Appearance backups") }
                     if (optionsExpanded) {
                     TextButton(enabled = !busy, onClick = { perform {
