@@ -76,8 +76,9 @@ suspend fun matchSpotifyPlaylist(preview: SpotifyPlaylistPreview, onProgress: (I
     for (batch in preview.tracks.chunked(2)) {
         matches += batch.map { track -> async {
             val target = TrackMatcher.Target(track.title, track.artist, track.seconds)
-            val candidates = withTimeoutOrNull(8_000L) {
-                YtMusicRepository.search((TrackMatcher.queries(target).firstOrNull() ?: return@async SpotifyImportMatch(track, null)).take(160), SearchFilter.SONGS)
+            val query = TrackMatcher.queries(target).firstOrNull()
+            val candidates = if (query == null) emptyList() else withTimeoutOrNull(8_000L) {
+                YtMusicRepository.search(query.take(160), SearchFilter.SONGS)
                     .getOrNull().orEmpty().filterIsInstance<SearchResult.Track>().map { it.song }
             }.orEmpty()
             SpotifyImportMatch(track, TrackMatcher.best(candidates, target))
