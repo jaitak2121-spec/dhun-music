@@ -51,6 +51,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -560,12 +562,12 @@ fun TopBarAccountButton(
                     .thumbnailBorder(CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.Rounded.Person,
-                    contentDescription = stringResource(R.string.switch_account),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
-                )
+                val displayName = account?.name?.trim().orEmpty()
+                if (displayName.isNotEmpty()) Text(io.github.jaitak2121spec.dhun.ui.screens.profileInitial(displayName),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.semantics { contentDescription = "Your Dhun profile: $displayName" })
+                else Icon(Icons.Rounded.Person, contentDescription = "Sign in to Dhun",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
     }

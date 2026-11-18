@@ -159,13 +159,13 @@ fun HomeScreen(
                     onDevicePlaylists?.let { action -> TextButton(onClick = action) { Text("Your playlists") } }
                 }
             }
-            if (!signedIn && !taste.configured) {
-                item { GuestDiscovery(onDiscover) }
-            }
             if (!dhunSignedIn && onSignIn != null) {
                 item {
                     SignInBanner(onSignIn = onSignIn, modifier = Modifier.padding(bottom = 8.dp))
                 }
+            }
+            if (!signedIn && !taste.configured) {
+                item { GuestDiscovery(onDiscover) }
             }
             when (state) {
                 is UiState.Loading -> {

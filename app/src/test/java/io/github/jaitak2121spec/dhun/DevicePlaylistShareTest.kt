@@ -23,4 +23,11 @@ class DevicePlaylistShareTest {
         assertFalse(homeGreeting("Jai Tak", 1).contains("Jai"))
         assertFalse(homeGreeting("Jai Tak", 2).contains("Jai"))
     }
+    @Test fun `profile initials keep full Unicode characters and handle missing names`() {
+        assertEquals("J", io.github.jaitak2121spec.dhun.ui.screens.profileInitial(" Jai Tak "))
+        assertEquals("आ", io.github.jaitak2121spec.dhun.ui.screens.profileInitial("आरव"))
+        assertEquals("🎵", io.github.jaitak2121spec.dhun.ui.screens.profileInitial("🎵 Music fan"))
+        assertEquals("♪", io.github.jaitak2121spec.dhun.ui.screens.profileInitial("  "))
+    }
+
 }

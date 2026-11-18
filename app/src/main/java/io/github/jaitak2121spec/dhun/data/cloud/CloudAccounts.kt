@@ -23,7 +23,7 @@ import javax.crypto.spec.GCMParameterSpec
 class CloudAccounts(context: Context) {
     companion object {
         val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
-        val displayName = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+        val profile = kotlinx.coroutines.flow.MutableStateFlow<io.github.jaitak2121spec.dhun.data.model.Account?>(null)
         val accountReturns = kotlinx.coroutines.flow.MutableStateFlow(0)
         fun consumeReturn(context: Context, intent: Intent) {
             val uri = intent.data ?: return
@@ -44,7 +44,12 @@ class CloudAccounts(context: Context) {
             .callTimeout(30, TimeUnit.SECONDS).build()
     }
     private val prefs = context.applicationContext.getSharedPreferences("dhun_cloud_session", Context.MODE_PRIVATE)
-    init { connectionState.value = connected; displayName.value = prefs.getString("displayName", null).takeIf { connected } }
+    init {
+        connectionState.value = connected
+        profile.value = if (connected) prefs.getString("displayName", null)?.takeIf { it.isNotBlank() }?.let {
+            io.github.jaitak2121spec.dhun.data.model.Account(it, prefs.getString("displayEmail", "").orEmpty(), null)
+        } else null
+    }
     val connected: Boolean get() = prefs.contains("session")
     val pending: Boolean get() = prefs.contains("pending") && prefs.getLong("pendingExpires", 0) > System.currentTimeMillis()
     private fun key(create: Boolean): SecretKey = synchronized(CloudAccounts::class.java) {
@@ -86,7 +91,7 @@ class CloudAccounts(context: Context) {
             val source = response.body?.source() ?: error("No response from Dhun Cloud.")
             check(!source.request(2_000_001)) { "Cloud response was too large." }
             val data = try { JSONObject(source.readUtf8()) } catch (_: Exception) { error("Dhun Cloud is temporarily unavailable.") }
-            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false; displayName.value = null }
+            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false; profile.value = null }
             check(response.isSuccessful) { data.optString("error", "Cloud request failed.") }
             return data
         }
@@ -115,8 +120,9 @@ class CloudAccounts(context: Context) {
     suspend fun account(): JSONObject = withContext(Dispatchers.IO) {
         request("device-account").getJSONObject("account").also {
             val name = it.optString("name").trim().take(100)
-            prefs.edit().putString("displayName", name).apply()
-            displayName.value = name
+            val email = it.optString("email").trim().take(254)
+            prefs.edit().putString("displayName", name).putString("displayEmail", email).apply()
+            profile.value = io.github.jaitak2121spec.dhun.data.model.Account(name, email, null)
         }
     }
     suspend fun backup(): JSONObject = withContext(Dispatchers.IO) { request("device-backup") }
@@ -125,7 +131,7 @@ class CloudAccounts(context: Context) {
         request("device-disconnect", JSONObject())
         check(prefs.edit().clear().commit()) { "Could not clear the device connection." }
         connectionState.value = false
-        displayName.value = null
+        profile.value = null
     }
-    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false; displayName.value = null }
+    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false; profile.value = null }
 }

@@ -672,12 +672,12 @@ fun SignInBanner(onSignIn: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.sign_in),
+                text = "Make Dhun yours",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Your Dhun account · listening stays on this device",
+                text = "Your profile · Optional cloud backups",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -685,7 +685,7 @@ fun SignInBanner(onSignIn: () -> Unit, modifier: Modifier = Modifier) {
             )
         }
         Spacer(Modifier.width(12.dp))
-        Button(onClick = onSignIn) { Text(stringResource(R.string.sign_in)) }
+        Button(onClick = onSignIn) { Text("Sign in") }
     }
 }
 

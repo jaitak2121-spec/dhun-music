@@ -6,3 +6,8 @@ internal fun homeGreeting(name: String, variant: Int): String = when (variant.mo
     1 -> "Find your next favourite"
     else -> "Your soundtrack starts here"
 }
+
+/** A complete Unicode character, including names beginning with an emoji. */
+internal fun profileInitial(name: String): String = name.trim().let {
+    if (it.isEmpty()) "♪" else String(Character.toChars(it.codePointAt(0))).uppercase(java.util.Locale.ROOT)
+}

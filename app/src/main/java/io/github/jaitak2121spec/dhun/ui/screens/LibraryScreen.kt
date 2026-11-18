@@ -89,6 +89,7 @@ fun LibraryScreen(
     onShelfItemLongPress: (ShelfItem) -> Unit,
     onNewPlaylist: () -> Unit,
     onImportSpotify: () -> Unit,
+    onImportYouTube: () -> Unit,
     onDevicePlaylists: ((String?) -> Unit)? = null,
     /**
      * A shelf's "Show all" — every shelf's row here stops at five cards (see
@@ -155,6 +156,9 @@ fun LibraryScreen(
                     Row(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PlaylistActionCard(label = "New playlist", subtitle = "Saved in Dhun", symbol = "+", modifier = Modifier.weight(1f), onClick = onNewPlaylist)
                         PlaylistActionCard(label = "Import Spotify", subtitle = "From a public playlist link", symbol = "↓", modifier = Modifier.weight(1f), onClick = onImportSpotify)
+                    }
+                    androidx.compose.material3.OutlinedButton(onClick = onImportYouTube, modifier = Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(bottom = 16.dp)) {
+                        Text("Import YouTube / YouTube Music")
                     }
                     if (devicePlaylists.isNotEmpty()) LibraryGridShelf(
                         shelf = HomeShelf("Saved on this device", devicePlaylists.map { list ->

@@ -409,7 +409,8 @@ private fun DhunApp(
     val dhunAccount = remember { io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts(context.applicationContext) }
     val dhunSignedIn by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.connectionState.collectAsStateWithLifecycle()
     var showDhunAccount by remember { mutableStateOf(false) }
-    val dhunName by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.displayName.collectAsStateWithLifecycle()
+    val dhunProfile by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.profile.collectAsStateWithLifecycle()
+    val dhunName = dhunProfile?.name
     LaunchedEffect(dhunSignedIn) {
         if (dhunSignedIn && dhunName == null) runCatching { dhunAccount.account() }
     }
@@ -418,7 +419,7 @@ private fun DhunApp(
     var devicePlaylistSong by remember { mutableStateOf<Song?>(null) }
     var devicePlaylistId by remember { mutableStateOf<String?>(null) }
     var createDevicePlaylist by remember { mutableStateOf(false) }
-    var showSpotifyPlaylistImport by remember { mutableStateOf(false) }
+    var playlistImportSource by remember { mutableStateOf<io.github.jaitak2121spec.dhun.ui.screens.PlaylistImportSource?>(null) }
 
     val accountReturns by io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.accountReturns.collectAsStateWithLifecycle()
     LaunchedEffect(accountReturns) { if (accountReturns > 0) showDhunAccount = true }
@@ -1259,10 +1260,11 @@ private fun DhunApp(
      * remixes of the same song. Album, artist and playlist pages keep [play],
      * where the surrounding list *is* the thing the user asked for.
      */
-    if (showSpotifyPlaylistImport) io.github.jaitak2121spec.dhun.ui.screens.SpotifyPlaylistImportDialog(
-        onImported = { id -> showSpotifyPlaylistImport = false; devicePlaylistId = id; devicePlaylistSong = null; showDevicePlaylists = true },
-        onDismiss = { showSpotifyPlaylistImport = false },
-    )
+    playlistImportSource?.let { source -> io.github.jaitak2121spec.dhun.ui.screens.PlaylistImportDialog(
+        source = source,
+        onImported = { id -> playlistImportSource = null; devicePlaylistId = id; devicePlaylistSong = null; showDevicePlaylists = true },
+        onDismiss = { playlistImportSource = null },
+    ) }
     if (showDevicePlaylists) io.github.jaitak2121spec.dhun.ui.screens.DevicePlaylistsDialog(
         songToAdd = devicePlaylistSong, queue = player.queue, onPlay = play,
         initialPlaylistId = devicePlaylistId, startCreating = createDevicePlaylist,
@@ -2959,7 +2961,8 @@ private fun DhunApp(
                             // does nothing; see [onBrowseLongPress].
                             onShelfItemLongPress = onBrowseLongPress,
                             onNewPlaylist = { devicePlaylistSong = null; createDevicePlaylist = true; showDevicePlaylists = true },
-                            onImportSpotify = { showSpotifyPlaylistImport = true },
+                            onImportSpotify = { playlistImportSource = io.github.jaitak2121spec.dhun.ui.screens.PlaylistImportSource.SPOTIFY },
+                            onImportYouTube = { playlistImportSource = io.github.jaitak2121spec.dhun.ui.screens.PlaylistImportSource.YOUTUBE },
                             onDevicePlaylists = { id -> devicePlaylistSong = null; devicePlaylistId = id; showDevicePlaylists = true },
                             onShowAll = { shelf -> libraryShowAll = shelf },
                             replayCards = replayCards,
@@ -3231,7 +3234,7 @@ private fun DhunApp(
                             // itself rather than being told.
                             TopBarDownloadButton(onClick = { showDownloadManager = true })
                             TopBarAccountButton(
-                                account = null,
+                                account = dhunProfile.takeIf { dhunSignedIn },
                                 onClick = {
                                     showDhunAccount = true
                                 },

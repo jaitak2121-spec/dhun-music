@@ -541,6 +541,15 @@ object Innertube {
         put("continuation", token)
     }
 
+    /** Public playlist import always excludes saved cookies and account context. */
+    suspend fun browsePublicPlaylist(playlistId: String): JsonObject = postMusicAnonymous("browse") {
+        put("browseId", "VL$playlistId")
+    }
+
+    suspend fun browsePublicPlaylistContinuation(token: String): JsonObject = postMusicAnonymous("browse") {
+        put("continuation", token)
+    }
+
     /** Signed-in profile: display name, email/handle and avatar. */
     suspend fun accountMenu(): JsonObject = postMusic("account/account_menu") {}
 
