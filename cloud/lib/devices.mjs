@@ -1,3 +1,4 @@
+import {ACCOUNT_ACTIVITY_POLICY_VERSION} from './account-activity.mjs';
 import { randomBytes } from 'node:crypto';
 import { db } from './db.mjs';
 import { ApiError, randomToken, tokenHash, validToken, POLICY_VERSION } from './domain.mjs';
@@ -36,7 +37,7 @@ export async function connectionInfo(code) {
   if(!row)throw new ApiError(404,'This code expired or was already approved. Start again in the app.');
   return row;
 }
-export async function approveConnection(user,code,agree,policyVersion,browser = false) {
+export async function approveConnection(user,code,agree,policyVersion,browser = false,activityPolicyVersion = null) {
   const connection = await connectionInfo(code);
   if(agree!==true||policyVersion!==POLICY_VERSION)throw new ApiError(400,'Explicit Dhun account connection consent is required.');
   if(connection.handoff_required && !browser)throw new ApiError(400,'Continue sign-in from the app browser.');
@@ -44,8 +45,9 @@ export async function approveConnection(user,code,agree,policyVersion,browser = 
   const sql=db();
   const result=await sql.transaction([
     sql`INSERT INTO dhun.profiles (user_id,account_consent_version) VALUES (${user.id}::uuid,${POLICY_VERSION}) ON CONFLICT (user_id) DO UPDATE SET account_consent_version=${POLICY_VERSION}`,
+    sql`UPDATE dhun.profiles SET activity_consent_version=${ACCOUNT_ACTIVITY_POLICY_VERSION},activity_consented_at=now() WHERE user_id=${user.id}::uuid AND ${activityPolicyVersion===ACCOUNT_ACTIVITY_POLICY_VERSION}`,
     sql`UPDATE dhun.connections SET user_id=${user.id}::uuid,handoff_hash=${grant?tokenHash(grant):null} WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL RETURNING user_code`,
   ]);
-  if(!result[1].length)throw new ApiError(409,'This code expired or was already approved.');
+  if(!result[2].length)throw new ApiError(409,'This code expired or was already approved.');
   return{ok:true,returnToApp:connection.name==='Dhun Android browser',...(grant?{grant}:{})};
 }

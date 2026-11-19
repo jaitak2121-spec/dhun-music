@@ -461,29 +461,30 @@ audio.addEventListener('error', () => { if (audio.getAttribute('src')) status(cu
 document.addEventListener('keydown', safe(async event => { if (event.code !== 'Space' || event.target.closest('input,select,textarea,button,dialog')) return; event.preventDefault(); await togglePlayback(); }));
 if ('mediaSession' in navigator) for (const [action, handler] of Object.entries({ play: safe(() => audio.play()), pause: () => audio.pause(), previoustrack: safe(() => advance(-1)), nexttrack: safe(() => advance(1)), seekto: details => { if (Number.isFinite(audio.duration)) audio.currentTime = details.seekTime; } })) navigator.mediaSession.setActionHandler(action, handler);
 $('#account-open').addEventListener('click',()=>$('#settings-open').click());
-$('#settings-open').addEventListener('click', () => { $('#settings').showModal(); cloudAction(async()=>{const result=await request('cloudStatus');cloudConnected(result.connected);if(result.connected){const data=await request('cloudAccount');$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;}}); }); $('#settings-close').addEventListener('click', () => $('#settings').close());
+$('#settings-open').addEventListener('click', () => { $('#settings').showModal(); cloudAction(async()=>{const result=await request('cloudStatus');cloudConnected(result.connected);if(result.connected){const data=await request('cloudAccount');$('#account-activity').checked=data.account.activityEnabled===true;$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;}}); }); $('#settings-close').addEventListener('click', () => $('#settings').close());
 document.querySelectorAll('button[data-theme]').forEach(button => button.addEventListener('click', () => { theme = button.dataset.theme; applyTheme(); }));
 $('#appearance').addEventListener('change', event => { appearance = event.target.value; applyTheme(); }); $('#reduce-motion').addEventListener('change', () => { applyTheme(); if ($('#reduce-motion').checked) dismissIntro(); });
 $('#releases').addEventListener('click', safe(() => request('releases')));
 function cloudConnected(connected) {
   $('#cloud-connect').hidden=connected;
+  $('#account-activity-form').hidden=!connected;
   for(const id of ['cloud-upload','cloud-restore','cloud-disconnect'])$(`#${id}`).hidden=!connected;
   $('#cloud-status').textContent=connected?'Signed in to Dhun. Listening stays on this device. Backups are separately optional.':'Sign in to Dhun with Google. Your library and listening stay on this device.';
 }
 async function cloudAction(action) {
-  const buttons=['cloud-connect','cloud-upload','cloud-restore','cloud-disconnect','cloud-manage'].map(id=>$(`#${id}`));
+  const buttons=['account-activity-save','cloud-connect','cloud-upload','cloud-restore','cloud-disconnect','cloud-manage'].map(id=>$(`#${id}`));
   buttons.forEach(button=>button.disabled=true);
   try{await action();}catch(error){const connection=await request('cloudStatus').catch(()=>null);if(connection&&!connection.connected)cloudConnected(false);$('#cloud-status').textContent=error.message || 'Cloud request failed. Your local library is safe.';}
   finally{buttons.forEach(button=>button.disabled=false);}
 }
 $('#cloud-connect').addEventListener('click',()=>cloudAction(async()=>{
   const result=await request('cloudConnect');
-  $('#cloud-status').textContent=`In your browser, sign in and approve code ${result.code}. Keep settings open. Nothing is uploaded until you choose Upload backup.`;
+  $('#cloud-status').textContent=`In your browser, sign in and approve code ${result.code}. Keep settings open. Backups and account activity are separate choices.`;
   for(let attempt=0;attempt<100;attempt++){
     await new Promise(resolve=>setTimeout(resolve,3000));
     if(!$('#settings').open)return;
     const connection=await request('cloudPoll');
-    if(connection.connected){cloudConnected(true);const data=await request('cloudAccount');$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;return;}
+    if(connection.connected){cloudConnected(true);const data=await request('cloudAccount');$('#account-activity').checked=data.account.activityEnabled===true;$('#cloud-status').textContent=`Signed in as ${data.account.name} · ${data.account.email}. Backups are optional.`;return;}
   }
   throw Error('Connection expired. Please connect again.');
 }));
@@ -552,3 +553,5 @@ async function shortcutPlayback(command){
 }
 window.dhun.onPlaybackCommand(safe(shortcutPlayback));
 request('playbackReady').catch(()=>{});
+
+$('#account-activity-form').addEventListener('submit',event=>{event.preventDefault();cloudAction(async()=>{const result=await request('cloudActivitySet',$('#account-activity').checked);$('#account-activity').checked=result.enabled;$('#cloud-status').textContent=result.pending?'Sharing stopped on this device. Server deletion retries when online; keep the account connected.':result.enabled?'Account activity sharing enabled.':'Account activity sharing stopped and deleted.';});});

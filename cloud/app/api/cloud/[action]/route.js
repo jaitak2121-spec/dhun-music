@@ -1,5 +1,6 @@
+import {ACCOUNT_ACTIVITY_POLICY_VERSION,accountActivity,accountActivityConsent,accountUsageOverview} from '../../../../lib/account-activity.mjs';
 import {cookies} from 'next/headers';
-import {approvalCookie,browserApproval,hasBrowserApproval} from '../../../../lib/browser-connection.mjs';
+import {approvalCookie,browserApproval,hasBrowserApproval,browserActivityApproval} from '../../../../lib/browser-connection.mjs';
 import { activity, usageOverview } from '../../../../lib/activity.mjs';
 import { db, asUser } from '../../../../lib/db.mjs';
 import { ApiError, POLICY_VERSION, validateBackup } from '../../../../lib/domain.mjs';
@@ -19,20 +20,22 @@ export async function GET(request, context) {
     }
     if (action === 'connect-info') { await verifiedIdentity(); await limit(request,'connection-info',30); const code=new URL(request.url).searchParams.get('code');const info=await connectionInfo(code);return {...info,canFinish:info.handoff_required&&hasBrowserApproval((await cookies()).get(approvalCookie)?.value,code)}; }
     const user = ['device-backup','device-account'].includes(action) ? await deviceIdentity(request) : await verifiedIdentity(); const sql = db();
-    if (action === 'device-account') return { account: { id: user.id, name: user.name, email: user.email } };
+    if (action === 'device-account') { const [profile]=await sql`SELECT activity_consent_version FROM dhun.profiles WHERE user_id=${user.id}::uuid`;return { account: { id: user.id, name: user.name, email: user.email, activityEnabled:profile?.activity_consent_version===ACCOUNT_ACTIVITY_POLICY_VERSION } }; }
     if (action === 'usage') {
       if (!isOwner(user)) throw new ApiError(403, 'Owner access is required.');
-      return usageOverview();
+      const [usage,accounts]=await Promise.all([usageOverview(),accountUsageOverview()]);
+      return {...usage,accounts};
     }
     if (action === 'owner') {
       if (!isOwner(user)) throw new ApiError(403, 'Owner access is required.');
       // Only accounts that explicitly approved a Dhun device or backup appear here.
-      const accounts = await sql`SELECT u.id, u.name, u.email, p.account_consented_at, p.backup_consented_at, p.updated_at, p.revision, jsonb_array_length(p.favourites) AS favourites_count FROM dhun.profiles p JOIN neon_auth."user" u ON u.id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`;
+      const accounts = await sql`SELECT u.id, u.name, u.email, p.account_consented_at, p.backup_consented_at, p.activity_consent_version, (SELECT max(a.day)::text FROM dhun.account_activity a WHERE a.user_id=p.user_id) AS last_active_day, p.updated_at, p.revision, jsonb_array_length(p.favourites) AS favourites_count FROM dhun.profiles p JOIN neon_auth."user" u ON u.id=p.user_id ORDER BY p.updated_at DESC LIMIT 200`;
       return { accounts };
     }
     if (!['backup', 'export','device-backup'].includes(action)) throw new ApiError(404, 'Not found.');
-    const [[profile]] = await asUser(user.id, [sql`SELECT account_consent_version, account_consented_at, backup_consent_version, backup_consented_at, revision, favourites, preferences, updated_at FROM dhun.profiles WHERE user_id=${user.id}::uuid`]);
-    return { profile: profile || null, ...(action === 'device-backup' ? { email:user.email } : {}), ...(action === 'export' ? { account: { name: user.name, email: user.email }, policyVersion: POLICY_VERSION } : {}) };
+    const [[profile]] = await asUser(user.id, [sql`SELECT activity_consent_version,activity_consented_at,account_consent_version, account_consented_at, backup_consent_version, backup_consented_at, revision, favourites, preferences, updated_at FROM dhun.profiles WHERE user_id=${user.id}::uuid`]);
+    const accountActivityRows=action==='export'?(await asUser(user.id,[sql`SELECT day::text,platform,version FROM dhun.account_activity WHERE user_id=${user.id}::uuid ORDER BY day DESC`]))[0]:undefined;
+    return { ...(accountActivityRows?{activity:accountActivityRows}:{}),profile: profile || null, ...(action === 'device-backup' ? { email:user.email } : {}), ...(action === 'export' ? { account: { name: user.name, email: user.email }, policyVersion: POLICY_VERSION } : {}) };
   });
 }
 export async function POST(request, context) {
@@ -49,12 +52,12 @@ export async function POST(request, context) {
       await csrfCheck(request);await limit(request,'connection-begin',20);
       const body=await jsonBody(request,1024),info=await connectionInfo(body.code);
       if(!info.handoff_required||body.agree!==true||body.policyVersion!==POLICY_VERSION)throw new ApiError(400,'Start sign-in from Dhun.');
-      (await cookies()).set(approvalCookie,browserApproval(body.code),{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:300});
+      (await cookies()).set(approvalCookie,browserApproval(body.code,Date.now(),body.activityPolicyVersion===ACCOUNT_ACTIVITY_POLICY_VERSION),{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:300});
       return{ok:true};
     }
     if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name,body.handoff??false);return{...result,verificationUrl:body.handoff?`${publicOrigin()}/connect?code=${result.userCode}`:`${publicOrigin()}/?connect=${result.userCode}`}; }
     if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode,body.grant); }
-    const native = ['device-backup','device-disconnect'].includes(action);
+    const native = ['device-backup','device-disconnect','device-activity','device-activity-consent'].includes(action);
     if(!native)await csrfCheck(request);
     await limit(request, 'data', 60);
     const user = native ? await deviceIdentity(request) : action === 'delete-account' ? await identity() : await verifiedIdentity();
@@ -62,11 +65,13 @@ export async function POST(request, context) {
     if(action==='connect-complete'){
       const jar=await cookies();
       if(!hasBrowserApproval(jar.get(approvalCookie)?.value,body.code))throw new ApiError(403,'Tap Continue with Google to start sign-in again.');
-      const result=await approveConnection(user,body.code,true,POLICY_VERSION,true);
+      const result=await approveConnection(user,body.code,true,POLICY_VERSION,true,browserActivityApproval(jar.get(approvalCookie)?.value,body.code));
       jar.delete(approvalCookie);
       return result;
     }
-    if(action === 'connect-approve')return approveConnection(user,body.code,body.agree,body.policyVersion);
+    if(action === 'connect-approve')return approveConnection(user,body.code,body.agree,body.policyVersion,false,body.activityPolicyVersion);
+    if(action==='device-activity')return accountActivity(user.id,body);
+    if(action==='device-activity-consent'||action==='account-activity-consent')return accountActivityConsent(user.id,body);
     if(action === 'device-disconnect'){await asUser(user.id,[sql`DELETE FROM dhun.devices WHERE id=${user.device_id}::uuid AND user_id=${user.id}::uuid`]);return{ok:true};}
     if (action === 'delete-account') {
       if (body.confirm !== 'DELETE') throw new ApiError(400, 'Confirm account deletion.');

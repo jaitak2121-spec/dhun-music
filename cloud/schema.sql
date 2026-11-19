@@ -110,3 +110,22 @@ REVOKE ALL ON dhun.activity, dhun.download_clicks FROM PUBLIC, dhun_app;
 
 ALTER TABLE dhun.connections ADD COLUMN IF NOT EXISTS handoff_required boolean NOT NULL DEFAULT false;
 ALTER TABLE dhun.connections ADD COLUMN IF NOT EXISTS handoff_hash text;
+
+-- Separately consented account activity: one row per account/platform/UTC day.
+ALTER TABLE dhun.profiles ADD COLUMN IF NOT EXISTS activity_consent_version text;
+ALTER TABLE dhun.profiles ADD COLUMN IF NOT EXISTS activity_consented_at timestamptz;
+CREATE TABLE IF NOT EXISTS dhun.account_activity (
+  user_id uuid NOT NULL REFERENCES dhun.profiles(user_id) ON DELETE CASCADE,
+  day date NOT NULL DEFAULT (now() AT TIME ZONE 'UTC')::date,
+  platform text NOT NULL CHECK (platform IN ('android','windows','mac')),
+  version text NOT NULL CHECK (length(version) BETWEEN 1 AND 40),
+  PRIMARY KEY (user_id,day,platform)
+);
+CREATE INDEX IF NOT EXISTS account_activity_day ON dhun.account_activity(day);
+ALTER TABLE dhun.account_activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dhun.account_activity FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS own_account_activity ON dhun.account_activity;
+CREATE POLICY own_account_activity ON dhun.account_activity TO dhun_app
+  USING (user_id::text = current_setting('dhun.user_id', true));
+REVOKE ALL ON dhun.account_activity FROM PUBLIC, dhun_app;
+GRANT SELECT ON dhun.account_activity TO dhun_app;

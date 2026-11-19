@@ -48,6 +48,7 @@ fun CloudBackupDialog(onDismiss: () -> Unit, onTasteChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val cloud = remember { CloudAccounts(context.applicationContext) }
     val scope = rememberCoroutineScope()
+    val activityEnabled by CloudAccounts.activityEnabled.collectAsStateWithLifecycle()
     val profile by CloudAccounts.profile.collectAsStateWithLifecycle()
     var optionsExpanded by remember { mutableStateOf(false) }
     var showTaste by remember { mutableStateOf(false) }
@@ -125,6 +126,13 @@ fun CloudBackupDialog(onDismiss: () -> Unit, onTasteChanged: () -> Unit = {}) {
                     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (profile == null && !busy) TextButton(onClick = { perform { cloud.account(); message = "" } }) { Text("Refresh profile") }
                     Button(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = { showTaste = true }) { Text("Your music profile") }
+                    Text("Account activity", style = MaterialTheme.typography.titleMedium)
+                    Text("Share active dates, app version and platform with your account to help improve Dhun. No songs or listening time. Kept for 90 days; turning off deletes activity.", style = MaterialTheme.typography.bodySmall)
+                    TextButton(enabled = !busy, onClick = { perform {
+                        val enabled = !activityEnabled
+                        val synced = cloud.setActivityEnabled(enabled)
+                        message = if (!synced) "Sharing stopped on this device. Server deletion will retry when online. Keep your account connected until it completes." else if (enabled) "Account activity sharing enabled." else "Account activity sharing stopped and deleted."
+                    } }) { Text(if (activityEnabled) "Turn off account activity" else "Enable account activity") }
                     TextButton(onClick = { optionsExpanded = !optionsExpanded }) { Text(if (optionsExpanded) "Hide backup options" else "Appearance backups") }
                     if (optionsExpanded) {
                     TextButton(enabled = !busy, onClick = { perform {

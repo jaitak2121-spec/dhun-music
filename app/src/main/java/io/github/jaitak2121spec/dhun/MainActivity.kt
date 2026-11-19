@@ -272,6 +272,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         io.github.jaitak2121spec.dhun.data.UsageAnalytics.foreground(this)
+        io.github.jaitak2121spec.dhun.data.cloud.CloudAccounts.foreground(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

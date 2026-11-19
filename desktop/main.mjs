@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validId, searchTerm, tracksFromSearch, discoveryQueries, diverseTracks, stationTracks, RELEASES } from './model.mjs';
 import { getLyrics, parseLrc } from './lyrics.mjs';
 import { checkDesktopUpdate, installerURL } from './updates.mjs';
-import { cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
+import { cloudActivitySet,cloudActivityForeground,cloudAccount,cloudStatus,cloudConnect,cloudPoll,cloudBackup,cloudUpload,cloudDisconnect,cloudManage } from './cloud.mjs';
 import {searchSuggestions} from './search-suggestions.mjs';
 
 import {usageClient} from './usage.mjs';
@@ -114,6 +114,7 @@ handle('usageStatus',usage.status);
 handle('usageSet',usage.set);
 protocol.handle('dhun', serve);
 handle('cloudStatus',cloudStatus);
+handle('cloudActivitySet',cloudActivitySet);
 handle('cloudAccount',cloudAccount);
 handle('cloudConnect',cloudConnect);
 handle('cloudPoll',cloudPoll);
@@ -223,7 +224,7 @@ function createWindow() {
   window.webContents.on('did-start-loading',()=>{playbackReady=false;});
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
-  window.on('focus',()=>{void usage.foreground();});
+  window.on('focus',()=>{void usage.foreground();void cloudActivityForeground();});
   window.on('closed',()=>{playbackReady=false;window=null;});
   window.once('ready-to-show', () => window.show());
   window.loadURL('dhun://app/index.html');

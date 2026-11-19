@@ -7,6 +7,12 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import io.github.jaitak2121spec.dhun.BuildConfig
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,8 +26,15 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** Dhun identity is separate from optional YouTube sessions. No plaintext token fallback. */
-class CloudAccounts(context: Context) {
+class CloudAccounts(private val context: Context) {
     companion object {
+        private const val ACTIVITY_POLICY = "2026-11-19"
+        private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val activityLock = Mutex()
+        val activityEnabled = kotlinx.coroutines.flow.MutableStateFlow(false)
+        fun foreground(context: Context) {
+            activityScope.launch { activityLock.withLock { runCatching { CloudAccounts(context.applicationContext).reportActivity() } } }
+        }
         val connectionState = kotlinx.coroutines.flow.MutableStateFlow(false)
         val profile = kotlinx.coroutines.flow.MutableStateFlow<io.github.jaitak2121spec.dhun.data.model.Account?>(null)
         val accountReturns = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -46,6 +59,7 @@ class CloudAccounts(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("dhun_cloud_session", Context.MODE_PRIVATE)
     init {
         connectionState.value = connected
+        activityEnabled.value = connected && prefs.getBoolean("activityEnabled", false)
         profile.value = if (connected) prefs.getString("displayName", null)?.takeIf { it.isNotBlank() }?.let {
             io.github.jaitak2121spec.dhun.data.model.Account(it, prefs.getString("displayEmail", "").orEmpty(), null)
         } else null
@@ -83,15 +97,17 @@ class CloudAccounts(context: Context) {
         saveSecret("session", value)
         connectionState.value = true
     }
-    private fun request(action: String, body: JSONObject? = null, authenticated: Boolean = true): JSONObject {
+    private fun request(action: String, body: JSONObject? = null, authenticated: Boolean = true, timeoutSeconds: Long = 30): JSONObject {
         val builder = Request.Builder().url("$URL/api/cloud/$action")
         if (authenticated) builder.header("Authorization", "Bearer ${token()}")
         if (body != null) builder.post(body.toString().toRequestBody("application/json".toMediaType()))
-        http.newCall(builder.build()).execute().use { response ->
+        val call = http.newCall(builder.build())
+        call.timeout().timeout(timeoutSeconds, TimeUnit.SECONDS)
+        call.execute().use { response ->
             val source = response.body?.source() ?: error("No response from Dhun Cloud.")
             check(!source.request(2_000_001)) { "Cloud response was too large." }
             val data = try { JSONObject(source.readUtf8()) } catch (_: Exception) { error("Dhun Cloud is temporarily unavailable.") }
-            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false; profile.value = null }
+            if (authenticated && response.code == 401) { prefs.edit().clear().commit(); connectionState.value = false; profile.value = null; activityEnabled.value = false }
             check(response.isSuccessful) { data.optString("error", "Cloud request failed.") }
             return data
         }
@@ -117,12 +133,45 @@ class CloudAccounts(context: Context) {
             true
         }
     }
-    suspend fun account(): JSONObject = withContext(Dispatchers.IO) {
+    suspend fun account(): JSONObject = withContext(Dispatchers.IO) { activityLock.withLock {
         request("device-account").getJSONObject("account").also {
             val name = it.optString("name").trim().take(100)
             val email = it.optString("email").trim().take(254)
             prefs.edit().putString("displayName", name).putString("displayEmail", email).apply()
+            if (!prefs.getBoolean("activityDisablePending", false)) {
+                activityEnabled.value = it.optBoolean("activityEnabled")
+                prefs.edit().putBoolean("activityEnabled", activityEnabled.value).apply()
+            }
+            foreground(context)
             profile.value = io.github.jaitak2121spec.dhun.data.model.Account(name, email, null)
+        }
+    } }
+    private fun reportActivity() {
+        if (!connected) return
+        if (prefs.getBoolean("activityDisablePending", false)) {
+            request("device-activity-consent", JSONObject().put("agree", false).put("policyVersion", ACTIVITY_POLICY), timeoutSeconds = 4)
+            prefs.edit().remove("activityDisablePending").remove("activityDay").commit()
+        }
+        if (!prefs.getBoolean("activityEnabled", false)) return
+        val day = "${System.currentTimeMillis() / 86_400_000}:${BuildConfig.VERSION_NAME}"
+        if (prefs.getString("activityDay", null) == day) return
+        val result = request("device-activity", JSONObject().put("platform", "android").put("version", BuildConfig.VERSION_NAME), timeoutSeconds = 4)
+        activityEnabled.value = result.optBoolean("enabled")
+        prefs.edit().putBoolean("activityEnabled", activityEnabled.value).putString("activityDay", day).commit()
+    }
+    suspend fun setActivityEnabled(value: Boolean): Boolean = withContext(Dispatchers.IO) {
+        activityLock.withLock {
+            check(connected) { "Sign in to Dhun first." }
+            if (!value) {
+                prefs.edit().putBoolean("activityEnabled", false).putBoolean("activityDisablePending", true).remove("activityDay").commit()
+                activityEnabled.value = false
+                return@withLock runCatching { reportActivity(); true }.getOrDefault(false)
+            }
+            request("device-activity-consent", JSONObject().put("agree", true).put("policyVersion", ACTIVITY_POLICY))
+            prefs.edit().putBoolean("activityEnabled", true).remove("activityDisablePending").remove("activityDay").commit()
+            activityEnabled.value = true
+            foreground(context)
+            true
         }
     }
     suspend fun backup(): JSONObject = withContext(Dispatchers.IO) { request("device-backup") }
@@ -132,6 +181,7 @@ class CloudAccounts(context: Context) {
         check(prefs.edit().clear().commit()) { "Could not clear the device connection." }
         connectionState.value = false
         profile.value = null
+        activityEnabled.value = false
     }
-    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false; profile.value = null }
+    fun forget() { check(prefs.edit().clear().commit()) { "Could not clear the device connection." }; connectionState.value = false; profile.value = null; activityEnabled.value = false }
 }

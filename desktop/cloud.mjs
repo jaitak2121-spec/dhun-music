@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import {accountActivityClient} from './account-activity.mjs';
 import { safeStorage, app, shell } from 'electron';
 export const CLOUD_URL='https://dhun-cloud.vercel.app';
 let pending;
 const tokenFile=()=>path.join(app.getPath('userData'),'cloud-session.enc');
 function requireStorage(){if(!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend?.()==='basic_text')throw Error('Secure system storage is unavailable. Cloud connection is disabled on this device.');}
 async function token(){try{const data=await readFile(tokenFile());requireStorage();return safeStorage.decryptString(data);}catch(error){if(error.code==='ENOENT')return null;throw Error('Your saved cloud connection could not be opened. Disconnect and reconnect.');}}
-async function api(action,body,credential){
-  const response=await fetch(`${CLOUD_URL}/api/cloud/${action}`,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(credential?{authorization:`Bearer ${credential}`}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000),redirect:'error'});
+async function api(action,body,credential,timeout=30000){
+  const response=await fetch(`${CLOUD_URL}/api/cloud/${action}`,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(credential?{authorization:`Bearer ${credential}`}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(timeout),redirect:'error'});
   let data;try{data=await response.json();}catch{throw Error('Dhun Cloud is not available. Please try later.');}
   if(!response.ok){if(response.status===401&&credential)await unlink(tokenFile()).catch(error=>{if(error.code!=='ENOENT')throw error;});throw Error(data.error || 'Cloud request failed.');}return data;
 }
+let activity;
+function activityClient(){return activity??=accountActivityClient({file:path.join(app.getPath('userData'),'account-activity.json'),platform:process.platform==='darwin'?'mac':'windows',version:app.getVersion(),api:async(action,body)=>{const secret=await token();if(!secret)throw Error('Sign in to Dhun first.');return api(action,body,secret,4000);}});}
+export const cloudActivityForeground=()=>activityClient().foreground();
+export async function cloudActivitySet(enabled){if(!await token())throw Error('Sign in to Dhun first.');const result=await activityClient().set(enabled);if(enabled)void cloudActivityForeground();return result;}
 export async function cloudStatus(){return{connected:Boolean(await token())};}
 export async function cloudConnect(){
   requireStorage();if(await token())throw Error('Disconnect the existing cloud account first.');
@@ -27,14 +32,15 @@ export async function cloudPoll(){
   const data=await api('connect-poll',{deviceCode:pending.secret});
   if(data.pending)return{pending:true};
   if(typeof data.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(data.token))throw Error('Invalid cloud session.');
-  requireStorage();await writeFile(tokenFile(),safeStorage.encryptString(data.token),{mode:0o600});pending=null;return{connected:true};
+  await activityClient().reset();requireStorage();await writeFile(tokenFile(),safeStorage.encryptString(data.token),{mode:0o600});pending=null;return{connected:true};
 }
-export async function cloudAccount(){const secret=await token();if(!secret)throw Error('Sign in to Dhun first.');return api('device-account',undefined,secret);}
+export async function cloudAccount(){const secret=await token();if(!secret)throw Error('Sign in to Dhun first.');const data=await api('device-account',undefined,secret);const choice=await activityClient().observe(data.account.activityEnabled);data.account.activityEnabled=choice.enabled;void cloudActivityForeground();return data;}
 export async function cloudBackup(){const secret=await token();if(!secret)throw Error('Connect your Dhun account first.');return api('device-backup',undefined,secret);}
 export async function cloudUpload(backup){const secret=await token();if(!secret)throw Error('Connect your Dhun account first.');return api('device-backup',backup,secret);}
 export async function cloudDisconnect(){
   const secret=await token();
   if(secret)await api('device-disconnect',{},secret);
+  await activityClient().reset();
   await unlink(tokenFile()).catch(error=>{if(error.code!=='ENOENT')throw error;});pending=null;return{connected:false};
 }
 export const cloudManage=()=>shell.openExternal(CLOUD_URL);

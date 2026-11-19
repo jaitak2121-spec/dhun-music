@@ -1,7 +1,7 @@
 {
   "name": "dhun-desktop",
   "productName": "Dhun",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Your music. Your rhythm.",
   "author": "Dhun contributors",
   "license": "GPL-3.0-only",
@@ -35,6 +35,7 @@
       "updates.mjs",
       "cloud.mjs",
       "usage.mjs",
+      "account-activity.mjs",
       "search-suggestions.mjs",
       "renderer/**/*",
       "package.json",

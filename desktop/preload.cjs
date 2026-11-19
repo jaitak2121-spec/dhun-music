@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('dhun', Object.freeze({
   version: () => ipcRenderer.invoke('dhun:version'),
   updates: () => ipcRenderer.invoke('dhun:updates'),
   downloadUpdate: () => ipcRenderer.invoke('dhun:downloadUpdate'),
+  cloudActivitySet: enabled => ipcRenderer.invoke('dhun:cloudActivitySet',enabled),
   cloudAccount: () => ipcRenderer.invoke('dhun:cloudAccount'),
   cloudStatus: () => ipcRenderer.invoke('dhun:cloudStatus'),
   cloudConnect: () => ipcRenderer.invoke('dhun:cloudConnect'),
