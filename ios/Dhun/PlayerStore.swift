@@ -28,6 +28,7 @@ import DhunCore
     private var resolution: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
     private var lyricsID = ""
+    private var downloading = Set<String>()
     private let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
     static let folder: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var libraryFile: URL { Self.folder.appendingPathComponent("library.json") }
@@ -109,7 +110,8 @@ import DhunCore
         do { let value = try await catalogue.lyrics(track); guard current?.id == track.id else { return }; lyrics = value; lyricLines = LyricLine.parse(value) } catch { if current?.id == track.id { lyrics = error.localizedDescription } }
     }
     func download(_ track: Track) async {
-        guard track.localFile == nil, !library.downloads.contains(where: { $0.id == track.id }) else { return }
+        guard track.localFile == nil, !library.downloads.contains(where: { $0.id == track.id }), downloading.insert(track.id).inserted else { return }
+        defer { downloading.remove(track.id) }
         do {
             let url = try await catalogue.stream(track); let (file, response) = try await URLSession.shared.download(from: url)
             defer { try? FileManager.default.removeItem(at: file) }

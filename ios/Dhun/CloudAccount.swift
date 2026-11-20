@@ -4,6 +4,9 @@ import AuthenticationServices
 import Security
 import DhunCore
 
+private final class NoAccountRedirects: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
+}
 @MainActor final class CloudAccount: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
     @Published var name = ""
     @Published var email = ""
@@ -11,6 +14,7 @@ import DhunCore
     @Published var busy = false
     @Published var activityEnabled = false
     @Published var message: String?
+    private let session = URLSession(configuration: .ephemeral, delegate: NoAccountRedirects(), delegateQueue: nil)
     private let origin = "https://dhun-cloud.vercel.app"
     private let keychainService = "io.github.jaitak2121spec.dhun.ios"
     private var browser: ASWebAuthenticationSession?
@@ -37,7 +41,7 @@ import DhunCore
         var request = URLRequest(url: URL(string: "\(origin)/api/cloud/\(action)")!, timeoutInterval: 15)
         if authenticated { guard let secret = try token() else { throw DhunError.message("Sign in to Dhun first.") }; request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization") }
         if let body { request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type"); request.httpBody = try JSONSerialization.data(withJSONObject: body) }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard data.count <= 2_000_000, let http = response as? HTTPURLResponse, let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw DhunError.message("Dhun accounts are temporarily unavailable.") }
         if http.statusCode == 401 && authenticated { clearToken(); connected = false; name = ""; email = ""; activityEnabled = false }
         guard (200...299).contains(http.statusCode) else { throw DhunError.message(json["error"] as? String ?? "Please try again.") }; return json
