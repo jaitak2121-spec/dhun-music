@@ -38,7 +38,7 @@ import DhunCore
         if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(Library.self, from: data) { library = saved }
         if testing {
             library = Library()
-            home = [Track(id: "demo-local", title: "Your everyday soundtrack", artist: "Dhun", duration: 60, localFile: "demo.wav"), Track(id: "demo-second", title: "Find your rhythm", artist: "Dhun", duration: 180), Track(id: "demo-third", title: "A little more you", artist: "Dhun", duration: 215)]
+            home = [Track(id: "demo-local", title: "Your everyday soundtrack", artist: "Dhun", duration: 60, localFile: "demo.wav"), Track(id: "demo-second", title: "Find your rhythm", artist: "Dhun", duration: 180, localFile: "demo.wav"), Track(id: "demo-third", title: "A little more you", artist: "Dhun", duration: 215, localFile: "demo.wav")]
             try? Self.testTone().write(to: Self.folder.appendingPathComponent("demo.wav"))
         }
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] time in

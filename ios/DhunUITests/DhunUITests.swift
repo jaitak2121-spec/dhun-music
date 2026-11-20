@@ -15,7 +15,13 @@ final class DhunUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [progress], timeout: 8), .completed)
         app.buttons["playerToggle"].tap(); XCTAssertEqual(app.buttons["playerToggle"].label, "Play")
         app.buttons["Like song"].tap(); screenshot("03-Player")
-        app.buttons["Close"].tap(); app.tabBars.buttons["Library"].tap(); app.staticTexts["Liked songs · 1"].tap()
+        app.buttons["Close"].tap()
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.navigationBars["Now playing"])
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
+        app.tabBars.buttons["Library"].tap()
+        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
+        let liked = app.buttons["likedSongs"]
+        XCTAssertTrue(liked.waitForExistence(timeout: 5)); XCTAssertEqual(liked.value as? String, "1"); liked.tap()
         XCTAssertTrue(app.buttons["Play Your everyday soundtrack"].waitForExistence(timeout: 5))
     }
     @MainActor private func screenshot(_ name: String) { let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); image.name = name; image.lifetime = .keepAlways; add(image) }

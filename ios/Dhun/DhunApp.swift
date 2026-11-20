@@ -21,11 +21,15 @@ struct RootView: View {
     @State private var player = false
     var body: some View {
         TabView {
-            NavigationStack { HomeView().toolbar { profileButton } }.tabItem { Label("Home", systemImage: "house.fill") }
-            NavigationStack { SearchView().toolbar { profileButton } }.tabItem { Label("Search", systemImage: "magnifyingglass") }
-            NavigationStack { LibraryView().toolbar { profileButton } }.tabItem { Label("Library", systemImage: "books.vertical.fill") }
+            NavigationStack { HomeView().toolbar { profileButton }.safeAreaInset(edge: .bottom, spacing: 0) { miniPlayer } }.tabItem { Label("Home", systemImage: "house.fill") }
+            NavigationStack { SearchView().toolbar { profileButton }.safeAreaInset(edge: .bottom, spacing: 0) { miniPlayer } }.tabItem { Label("Search", systemImage: "magnifyingglass") }
+            NavigationStack { LibraryView().toolbar { profileButton }.safeAreaInset(edge: .bottom, spacing: 0) { miniPlayer } }.tabItem { Label("Library", systemImage: "books.vertical.fill") }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .sheet(isPresented: $profile) { ProfileView() }
+        .sheet(isPresented: $player) { NowPlayingView() }
+        .alert("Dhun", isPresented: Binding(get: { store.message != nil }, set: { if !$0 { store.message = nil } })) { Button("OK") { store.message = nil } } message: { Text(store.message ?? "") }
+    }
+    @ViewBuilder private var miniPlayer: some View {
             if let track = store.current {
                 HStack(spacing: 12) {
                     Button { player = true } label: { HStack { Artwork(track: track, size: 44); VStack(alignment: .leading) { Text(track.title).font(.subheadline.bold()).lineLimit(1); Text(track.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }.frame(maxWidth: .infinity, alignment: .leading) }.buttonStyle(.plain).accessibilityIdentifier("openPlayer")
@@ -33,10 +37,6 @@ struct RootView: View {
                     Button { store.next() } label: { Image(systemName: "forward.end.fill") }.accessibilityLabel("Next track")
                 }.padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20)).padding(.horizontal, 12).padding(.bottom, 4)
             }
-        }
-        .sheet(isPresented: $profile) { ProfileView() }
-        .sheet(isPresented: $player) { NowPlayingView() }
-        .alert("Dhun", isPresented: Binding(get: { store.message != nil }, set: { if !$0 { store.message = nil } })) { Button("OK") { store.message = nil } } message: { Text(store.message ?? "") }
     }
     private var profileButton: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) { Button { profile = true } label: { Image(systemName: "person.crop.circle").font(.title2) }.accessibilityLabel("Your profile") }
@@ -91,7 +91,7 @@ struct LibraryView: View {
                 Button { files = true } label: { Label("Add audio from Files", systemImage: "folder") }
             }
             Section("Your collection") {
-                NavigationLink { TrackList(title: "Liked songs", tracks: store.library.favourites) } label: { Label("Liked songs · \(store.library.favourites.count)", systemImage: "heart.fill") }
+                NavigationLink { TrackList(title: "Liked songs", tracks: store.library.favourites) } label: { Label("Liked songs · \(store.library.favourites.count)", systemImage: "heart.fill") }.accessibilityIdentifier("likedSongs").accessibilityValue(String(store.library.favourites.count))
                 NavigationLink { TrackList(title: "On this iPhone", tracks: store.library.downloads) } label: { Label("Downloads & local music", systemImage: "arrow.down.circle.fill") }
             }
             Section("Playlists") { ForEach(store.library.playlists) { playlist in NavigationLink { PlaylistView(id: playlist.id) } label: { Label(playlist.name, systemImage: "music.note.list") } }.onDelete { store.library.playlists.remove(atOffsets: $0); store.save() } }
