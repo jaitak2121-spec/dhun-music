@@ -10,7 +10,10 @@ final class DhunUITests: XCTestCase {
         app.tabBars.buttons["Home"].tap(); app.buttons["home-demo-local"].tap()
         XCTAssertTrue(app.buttons["openPlayer"].waitForExistence(timeout: 5)); app.buttons["openPlayer"].tap()
         XCTAssertTrue(app.navigationBars["Now playing"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 8)); app.buttons["Pause"].tap(); XCTAssertTrue(app.buttons["Play"].exists)
+        XCTAssertTrue(app.buttons["playerToggle"].waitForExistence(timeout: 8));
+        let progress = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "0:00"), object: app.staticTexts["playerElapsed"])
+        XCTAssertEqual(XCTWaiter.wait(for: [progress], timeout: 8), .completed)
+        app.buttons["playerToggle"].tap(); XCTAssertEqual(app.buttons["playerToggle"].label, "Play")
         app.buttons["Like song"].tap(); screenshot("03-Player")
         app.buttons["Close"].tap(); app.tabBars.buttons["Library"].tap(); app.staticTexts["Liked songs · 1"].tap()
         XCTAssertTrue(app.buttons["Play Your everyday soundtrack"].waitForExistence(timeout: 5))

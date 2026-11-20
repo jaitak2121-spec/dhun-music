@@ -38,7 +38,7 @@ import DhunCore
         if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(Library.self, from: data) { library = saved }
         if testing {
             library = Library()
-            home = [Track(id: "demo-local", title: "Your everyday soundtrack", artist: "Dhun", duration: 12, localFile: "demo.wav"), Track(id: "demo-second", title: "Find your rhythm", artist: "Dhun", duration: 180), Track(id: "demo-third", title: "A little more you", artist: "Dhun", duration: 215)]
+            home = [Track(id: "demo-local", title: "Your everyday soundtrack", artist: "Dhun", duration: 60, localFile: "demo.wav"), Track(id: "demo-second", title: "Find your rhythm", artist: "Dhun", duration: 180), Track(id: "demo-third", title: "A little more you", artist: "Dhun", duration: 215)]
             try? Self.testTone().write(to: Self.folder.appendingPathComponent("demo.wav"))
         }
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { [weak self] time in
@@ -128,6 +128,6 @@ import DhunCore
     }
     private static func testTone() -> Data {
         var bytes = Data(); func word<T: FixedWidthInteger>(_ value: T) { var little = value.littleEndian; withUnsafeBytes(of: &little) { bytes.append(contentsOf: $0) } }
-        bytes.append(Data("RIFF".utf8)); word(UInt32(36 + 24000 * 12 * 2)); bytes.append(Data("WAVEfmt ".utf8)); word(UInt32(16)); word(UInt16(1)); word(UInt16(1)); word(UInt32(24000)); word(UInt32(48000)); word(UInt16(2)); word(UInt16(16)); bytes.append(Data("data".utf8)); word(UInt32(24000 * 12 * 2)); bytes.append(Data(count: 24000 * 12 * 2)); return bytes
+        bytes.append(Data("RIFF".utf8)); word(UInt32(36 + 24000 * 60 * 2)); bytes.append(Data("WAVEfmt ".utf8)); word(UInt32(16)); word(UInt16(1)); word(UInt16(1)); word(UInt32(24000)); word(UInt32(48000)); word(UInt16(2)); word(UInt16(16)); bytes.append(Data("data".utf8)); word(UInt32(24000 * 60 * 2)); bytes.append(Data(count: 24000 * 60 * 2)); return bytes
     }
 }
