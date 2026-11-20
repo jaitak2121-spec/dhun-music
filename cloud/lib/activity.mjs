@@ -6,7 +6,7 @@ export function activityInput(body, erase = false) {
   const keys = erase ? ['installation'] : ['installation','platform','version'];
   if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !keys.includes(key)) ||
       typeof body.installation !== 'string' || !/^[a-f0-9]{64}$/.test(body.installation) ||
-      (!erase && (!['android','windows','mac'].includes(body.platform) || typeof body.version !== 'string' || !/^[0-9][A-Za-z0-9.+-]{0,39}$/.test(body.version)))) {
+      (!erase && (!['android','windows','mac','ios'].includes(body.platform) || typeof body.version !== 'string' || !/^[0-9][A-Za-z0-9.+-]{0,39}$/.test(body.version)))) {
     throw new ApiError(400, 'Invalid activity signal.');
   }
   return body;

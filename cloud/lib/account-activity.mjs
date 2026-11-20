@@ -6,7 +6,7 @@ export function accountActivityInput(body,consent=false){
   const keys=consent?['agree','policyVersion']:['platform','version'];
   if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(key=>!keys.includes(key))||
     (consent?typeof body.agree!=='boolean'||body.policyVersion!==ACCOUNT_ACTIVITY_POLICY_VERSION:
-      !['android','windows','mac'].includes(body.platform)||typeof body.version!=='string'||!/^[0-9][A-Za-z0-9.+-]{0,39}$/.test(body.version)))
+      !['android','windows','mac','ios'].includes(body.platform)||typeof body.version!=='string'||!/^[0-9][A-Za-z0-9.+-]{0,39}$/.test(body.version)))
     throw new ApiError(400,'Invalid account activity choice or signal.');
   return body;
 }

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/db.mjs';
-import { startConnection, approveConnection, pollConnection, deviceIdentity } from '../lib/devices.mjs';
+import { startConnection, approveConnection, pollConnection, deviceIdentity, connectionInfo } from '../lib/devices.mjs';
 import { POLICY_VERSION, tokenHash } from '../lib/domain.mjs';
 
 if (process.env.DHUN_RUN_CONNECTION_CHECK !== 'true') throw Error('Set DHUN_RUN_CONNECTION_CHECK=true to run this disposable-data check.');
@@ -36,7 +36,16 @@ try {
   await sql`UPDATE dhun.connections SET last_polled_at=NULL WHERE secret_hash=${tokenHash(mobile.deviceCode)}`;
   const signedIn=await pollConnection(mobile.deviceCode,browser.grant);assert.ok(signedIn.token);
   await assert.rejects(()=>pollConnection(mobile.deviceCode,browser.grant));
-  console.log('PASS: legacy compatibility, consent, phone secret + one-use browser handoff, identity and replay denial.');
+  const iphone=await startConnection('Dhun iPhone',true,'ios');connections.push(iphone);
+  assert.equal((await connectionInfo(iphone.userCode)).client_platform,'ios');
+  const iphoneApproval=await approveConnection({id},iphone.userCode,true,POLICY_VERSION,true);
+  assert.equal(iphoneApproval.platform,'ios');
+  assert.equal((await pollConnection(iphone.deviceCode)).pending,true);
+  await sql`UPDATE dhun.connections SET last_polled_at=NULL WHERE secret_hash=${tokenHash(iphone.deviceCode)}`;
+  assert.ok((await pollConnection(iphone.deviceCode,iphoneApproval.grant)).token);
+  await assert.rejects(()=>startConnection('Bad return target',true,'https://evil.example'));
+  await assert.rejects(()=>startConnection('iOS without browser handoff',false,'ios'));
+  console.log('PASS: legacy compatibility, consent, phone secret + one-use browser handoff, identity, replay denial and iPhone return binding.');
 } finally {
   for (const connection of connections) await sql`DELETE FROM dhun.connections WHERE secret_hash=${tokenHash(connection.deviceCode)}`;
   if (created) await sql`DELETE FROM neon_auth."user" WHERE id=${id}::uuid`;

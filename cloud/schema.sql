@@ -129,3 +129,10 @@ CREATE POLICY own_account_activity ON dhun.account_activity TO dhun_app
   USING (user_id::text = current_setting('dhun.user_id', true));
 REVOKE ALL ON dhun.account_activity FROM PUBLIC, dhun_app;
 GRANT SELECT ON dhun.account_activity TO dhun_app;
+
+-- iPhone uses the same one-use browser grant with its own return scheme.
+ALTER TABLE dhun.connections ADD COLUMN IF NOT EXISTS client_platform text;
+ALTER TABLE dhun.activity DROP CONSTRAINT IF EXISTS activity_platform_check;
+ALTER TABLE dhun.activity ADD CONSTRAINT activity_platform_check CHECK (platform IN ('android','windows','mac','ios'));
+ALTER TABLE dhun.account_activity DROP CONSTRAINT IF EXISTS account_activity_platform_check;
+ALTER TABLE dhun.account_activity ADD CONSTRAINT account_activity_platform_check CHECK (platform IN ('android','windows','mac','ios'));

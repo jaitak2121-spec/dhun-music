@@ -10,7 +10,7 @@ export default function Connect(){
   async function finish(token){
     if(finishing.current)return;finishing.current=true;setBusy(true);setMessage('Signed in. Returning to Dhun…');
     try{const data=await api('connect-complete',{code:code()},token);if(!/^[A-Za-z0-9_-]{43}$/.test(data.grant))throw Error('Invalid sign-in response.');
-      const url='intent://account/return?grant='+data.grant+'#Intent;scheme=dhun;package=io.github.jaitak2121spec.dhun;end';
+      const url=data.platform==='ios'?'dhun-ios://account/return?grant='+data.grant:'intent://account/return?grant='+data.grant+'#Intent;scheme=dhun;package=io.github.jaitak2121spec.dhun;end';
       setReturnURL(url);location.assign(url);
     }catch(error){setMessage(error.message);finishing.current=false;}finally{setBusy(false);}
   }

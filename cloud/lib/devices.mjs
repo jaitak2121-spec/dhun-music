@@ -11,12 +11,13 @@ export async function deviceIdentity(request) {
   if(!row)throw new ApiError(401,'Your cloud connection expired or was revoked. Connect again.');
   return row;
 }
-export async function startConnection(name, handoff = false) {
+export async function startConnection(name, handoff = false, platform = null) {
+  if(platform!==null&&(platform!=='ios'||handoff!==true))throw new ApiError(400,'Invalid client platform.');
   if(typeof handoff!=='boolean')throw new ApiError(400,'Invalid connection mode.');
   if(typeof name!=='string'||!name.trim()||name.length>60)throw new ApiError(400,'Invalid device name.');
   const sql=db(),secret=randomToken(),code=randomBytes(4).toString('hex').toUpperCase();
   await sql`DELETE FROM dhun.connections WHERE expires_at<now()`;
-  await sql`INSERT INTO dhun.connections (secret_hash,user_code,name,expires_at,handoff_required) VALUES (${tokenHash(secret)},${code},${name},now()+interval '5 minutes',${handoff})`;
+  await sql`INSERT INTO dhun.connections (secret_hash,user_code,name,expires_at,handoff_required,client_platform) VALUES (${tokenHash(secret)},${code},${name},now()+interval '5 minutes',${handoff},${platform})`;
   return {deviceCode:secret,userCode:code,expiresIn:300,interval:3};
 }
 export async function pollConnection(secret, grant) {
@@ -33,7 +34,7 @@ export async function pollConnection(secret, grant) {
 export async function connectionInfo(code) {
   if(typeof code!=='string'||!/^[A-F0-9]{8}$/.test(code))throw new ApiError(400,'Invalid connection code.');
   const sql=db();
-  const [row]=await sql`SELECT name,user_code,handoff_required FROM dhun.connections WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL`;
+  const [row]=await sql`SELECT name,user_code,handoff_required,client_platform FROM dhun.connections WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL`;
   if(!row)throw new ApiError(404,'This code expired or was already approved. Start again in the app.');
   return row;
 }
@@ -49,5 +50,5 @@ export async function approveConnection(user,code,agree,policyVersion,browser = 
     sql`UPDATE dhun.connections SET user_id=${user.id}::uuid,handoff_hash=${grant?tokenHash(grant):null} WHERE user_code=${code} AND expires_at>now() AND user_id IS NULL AND redeemed_at IS NULL RETURNING user_code`,
   ]);
   if(!result[2].length)throw new ApiError(409,'This code expired or was already approved.');
-  return{ok:true,returnToApp:connection.name==='Dhun Android browser',...(grant?{grant}:{})};
+  return{ok:true,platform:connection.client_platform,returnToApp:connection.name==='Dhun Android browser',...(grant?{grant}:{})};
 }

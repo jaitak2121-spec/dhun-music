@@ -55,7 +55,7 @@ export async function POST(request, context) {
       (await cookies()).set(approvalCookie,browserApproval(body.code,Date.now(),body.activityPolicyVersion===ACCOUNT_ACTIVITY_POLICY_VERSION),{httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:300});
       return{ok:true};
     }
-    if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name,body.handoff??false);return{...result,verificationUrl:body.handoff?`${publicOrigin()}/connect?code=${result.userCode}`:`${publicOrigin()}/?connect=${result.userCode}`}; }
+    if (action === 'connect-start') { await limit(request,'connection-start',10);const body=await jsonBody(request);const result=await startConnection(body.name,body.handoff??false,body.platform??null);return{...result,verificationUrl:body.handoff?`${publicOrigin()}/connect?code=${result.userCode}`:`${publicOrigin()}/?connect=${result.userCode}`}; }
     if (action === 'connect-poll') { await limit(request,'connection-poll',150);const body=await jsonBody(request);return pollConnection(body.deviceCode,body.grant); }
     const native = ['device-backup','device-disconnect','device-activity','device-activity-consent'].includes(action);
     if(!native)await csrfCheck(request);

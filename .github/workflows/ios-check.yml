@@ -1,0 +1,50 @@
+name: Dhun iPhone
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dhun-ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  iphone:
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Test catalogue parsing, playlist boundaries and recommendation filtering
+        run: swift test
+      - name: Generate native project
+        run: xcodegen generate
+      - name: Build for iPhone without a signing identity
+        run: xcodebuild -project Dhun.xcodeproj -scheme Dhun -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build-device CODE_SIGNING_ALLOWED=NO build > device-build.log 2>&1 || { tail -100 device-build.log; exit 1; }
+      - name: Test the iPhone interface and audio player
+        run: |
+          set -euo pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import sys,json; devices=[d for group in json.load(sys.stdin)["devices"].values() for d in group if "iPhone" in d["name"]]; print(devices[0]["udid"])')
+          xcodebuild -project Dhun.xcodeproj -scheme Dhun -destination "platform=iOS Simulator,id=$DEVICE_ID" -derivedDataPath build-simulator -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test > simulator-test.log 2>&1 || { tail -120 simulator-test.log; exit 1; }
+          mkdir -p Screenshots
+          xcrun xcresulttool export attachments --path TestResults.xcresult --output-path Screenshots
+      - name: Package unsigned development build
+        run: |
+          mkdir -p Payload
+          cp -R build-device/Build/Products/Release-iphoneos/Dhun.app Payload/
+          ditto -c -k --sequesterRsrc Payload Dhun-iPhone-UNSIGNED.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Dhun-iPhone-development
+          retention-days: 14
+          path: |
+            ios/Dhun-iPhone-UNSIGNED.zip
+            ios/Screenshots/
+            ios/*-build.log
+            ios/simulator-test.log

@@ -23,6 +23,10 @@ Desktop installers are unsigned development previews, so Windows or macOS may wa
 
 Current previews use a consistent, development-only signing identity. If Android refuses to update an older preview, back up your settings and downloads before uninstalling it once. See [preview signing](signing/DHUN_DEVELOPMENT.md). Future previews with this identity can install as updates.
 
+## iPhone development preview
+
+A native SwiftUI iPhone/iPad version is being built in [ios](ios/README.md). It requires iOS 17+ and Apple signing before installation on a physical phone. It is not yet a public signed installer or an App Store/TestFlight release.
+
 ## Your Dhun account
 
 New previews make Dhun accounts the main sign-in path. Continue with Google in the browser, then approve the app device code; email remains available for existing accounts. The YouTube Music connection is separately optional for YouTube library features. Users review the account privacy notice and explicitly approve their device. Account connection does not enable backups or start an automatic upload. The owner dashboard lists consenting accounts with their Dhun ID, name and email.
